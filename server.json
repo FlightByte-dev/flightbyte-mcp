@@ -1,0 +1,53 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.flightbyte/mcp",
+  "title": "FlightByte",
+  "description": "Live flight status, flight watches with signed webhooks, and FlightByte docs search.",
+  "version": "1.0.0",
+  "websiteUrl": "https://flightbyte.dev/docs/ai",
+  "repository": {
+    "url": "https://github.com/flightbyte/flightbyte-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@flightbyte/mcp",
+      "version": "1.0.0",
+      "runtimeHint": "npx",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "FLIGHTBYTE_KEY",
+          "description": "Your FlightByte API key (free at https://app.flightbyte.dev/signup). The docs tools work without it.",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.flightbyte.dev/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Your FlightByte API key as a bearer token: Bearer <key>. The docs tools work without it.",
+          "value": "Bearer {flightbyte_key}",
+          "isRequired": true,
+          "isSecret": true,
+          "variables": {
+            "flightbyte_key": {
+              "description": "Your FlightByte API key (free at https://app.flightbyte.dev/signup)",
+              "isRequired": true,
+              "isSecret": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
