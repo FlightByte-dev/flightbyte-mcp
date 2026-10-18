@@ -1,0 +1,71 @@
+{
+  "name": "@flightbyte/mcp",
+  "version": "1.0.0",
+  "description": "MCP server for FlightByte, the flight status API with signed webhooks: look flights up, watch them with webhook subscriptions, and search the docs from any AI assistant.",
+  "mcpName": "dev.flightbyte/mcp",
+  "license": "MIT",
+  "author": "FlightByte (https://flightbyte.dev)",
+  "homepage": "https://flightbyte.dev/docs/ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flightbyte/flightbyte-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flightbyte/flightbyte-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "flightbyte",
+    "flight-status",
+    "flight-tracking",
+    "flights",
+    "webhooks",
+    "aviation",
+    "ai"
+  ],
+  "type": "module",
+  "bin": {
+    "flightbyte-mcp": "dist/stdio.js"
+  },
+  "exports": {
+    ".": "./dist/server.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "server.json"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "npm run build && vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "start": "node dist/stdio.js",
+    "start:http": "node dist/http.js",
+    "sync:openapi": "node scripts/sync-openapi.mjs",
+    "prepublishOnly": "npm run check"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5"
+  }
+}
