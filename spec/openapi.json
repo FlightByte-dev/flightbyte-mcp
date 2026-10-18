@@ -1,0 +1,1640 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1/countries": {
+      "get": {
+        "operationId": "list-countries",
+        "parameters": [
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "tr",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List countries",
+        "tags": [
+          "countries"
+        ],
+        "description": "List every country with its flag URLs and emoji.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/countries/{code}": {
+      "get": {
+        "operationId": "get-country",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "TR",
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "tr",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a country",
+        "tags": [
+          "countries"
+        ],
+        "description": "Resolve a single ISO 3166-1 alpha-2 country code.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/flags/{file}": {
+      "get": {
+        "operationId": "get-flag",
+        "parameters": [
+          {
+            "name": "file",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "tr.svg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "shape",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "4x3",
+                "1x1"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/svg+xml": {}
+            },
+            "description": ""
+          }
+        },
+        "summary": "Get a flag",
+        "tags": [
+          "countries"
+        ],
+        "description": "Serve a country flag as SVG.",
+        "security": []
+      }
+    },
+    "/v1/flights/search": {
+      "get": {
+        "description": "Serves from the Redis cache when fresh. Concurrent identical searches are coalesced into a single upstream call. When the flight number operates more than one leg that day, pass `origin` (and optionally `destination`) to pick one; without a selector the provider default is returned and every leg is listed under `alternates`.",
+        "operationId": "search-flights",
+        "parameters": [
+          {
+            "name": "carrier",
+            "required": true,
+            "in": "query",
+            "description": "Airline IATA/ICAO code.",
+            "schema": {
+              "example": "TK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "flightNumber",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "1848",
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "description": "Local departure date at the origin.",
+            "schema": {
+              "example": "2026-09-08",
+              "type": "string"
+            }
+          },
+          {
+            "name": "origin",
+            "required": false,
+            "in": "query",
+            "description": "Departure airport, when the flight number operates several legs that day. IATA or the upstream code; both resolve to the same leg.",
+            "schema": {
+              "example": "IST",
+              "type": "string"
+            }
+          },
+          {
+            "name": "destination",
+            "required": false,
+            "in": "query",
+            "description": "Arrival airport, to narrow further.",
+            "schema": {
+              "example": "JFK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "flightId",
+            "required": false,
+            "in": "query",
+            "description": "Provider flight id from a previous response's `alternates`. Exact match.",
+            "schema": {
+              "example": "1407266450",
+              "type": "string"
+            }
+          },
+          {
+            "name": "refresh",
+            "required": false,
+            "in": "query",
+            "description": "Bypass the cache.",
+            "schema": {
+              "example": "false",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlightSnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such flight, or no leg matching the selector."
+          }
+        },
+        "summary": "Search flights",
+        "tags": [
+          "flights"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/flights/{carrier}/{flightNumber}/{date}": {
+      "get": {
+        "operationId": "get-flight",
+        "parameters": [
+          {
+            "name": "carrier",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "TK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "flightNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "1848",
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "2026-09-08",
+              "type": "string"
+            }
+          },
+          {
+            "name": "origin",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "IST",
+              "type": "string"
+            }
+          },
+          {
+            "name": "destination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "JFK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "flightId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "refresh",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "false",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlightSnapshot"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a flight",
+        "tags": [
+          "flights"
+        ],
+        "description": "Fetch a single flight leg by its natural key.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/flights/{carrier}/{flightNumber}/{date}/timeline": {
+      "get": {
+        "operationId": "flight-timeline",
+        "parameters": [
+          {
+            "name": "carrier",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "flightNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "origin",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "IST",
+              "type": "string"
+            }
+          },
+          {
+            "name": "destination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "JFK",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlightTimeline"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Flight timeline",
+        "tags": [
+          "flights"
+        ],
+        "description": "Upstream change history for a flight leg, newest first.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions": {
+      "post": {
+        "description": "Validates that the flight exists, seeds the change-detection baseline and starts adaptive polling. The signing secret is returned in full only here.",
+        "operationId": "create-subscription",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "required": false,
+            "in": "header",
+            "description": "Replaying the same key within 24h returns the original subscription.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subscription"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a subscription",
+        "tags": [
+          "subscriptions"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "list-subscriptions",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "active",
+                "pending",
+                "paused",
+                "completed",
+                "suspended"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "carrier",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "TK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "flightNumber",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "1848",
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-09-08",
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List subscriptions",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "List subscriptions, newest first.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}": {
+      "get": {
+        "operationId": "get-subscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a subscription",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Fetch one subscription. The secret is masked.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "update-subscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update a subscription",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Update the webhook URL, event filter or delay threshold.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "delete-subscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a subscription",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Delete a subscription and stop polling if it was the last one.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/pause": {
+      "post": {
+        "operationId": "pause-subscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Pause a subscription",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Stop polling and delivering without losing the subscription.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/resume": {
+      "post": {
+        "operationId": "resume-subscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Resume a subscription",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Resume a paused or auto-suspended subscription.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/test": {
+      "post": {
+        "operationId": "send-test-event",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "eventId": "evt_..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Send a test event",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Send a signed test webhook to verify the receiver.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/deliveries": {
+      "get": {
+        "operationId": "list-deliveries",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List deliveries",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Recent webhook delivery attempts, newest first.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/events": {
+      "get": {
+        "operationId": "list-events",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List sent events",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Recent events generated for this subscription.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/secret": {
+      "get": {
+        "operationId": "reveal-secret",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Reveal the secret",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Reveal the signing secret again.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/subscriptions/{id}/secret/rotate": {
+      "post": {
+        "operationId": "rotate-secret",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Rotate the secret",
+        "tags": [
+          "subscriptions"
+        ],
+        "description": "Generate a new signing secret. Previous signatures stop validating.",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "FlightByte API",
+    "description": "Flight status lookups and signed webhooks for every change. Look a flight up by carrier, number and date, or subscribe to it and receive a webhook each time something about it changes.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "flights",
+      "description": "Look flights up, pick a leg, read the timeline."
+    },
+    {
+      "name": "subscriptions",
+      "description": "Watch a flight and receive every change as a webhook."
+    },
+    {
+      "name": "countries",
+      "description": "Country names, emoji and SVG flags for airport data."
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://api.flightbyte.dev"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Your FlightByte API key. Request one at https://flightbyte.dev/get-api-key."
+      }
+    },
+    "schemas": {
+      "CarrierRef": {
+        "type": "object",
+        "properties": {
+          "iata": {
+            "type": "string",
+            "example": "TK"
+          },
+          "icao": {
+            "type": "object",
+            "example": "THY"
+          },
+          "name": {
+            "type": "string",
+            "example": "Turkish Airlines"
+          }
+        },
+        "required": [
+          "iata",
+          "name"
+        ]
+      },
+      "CodeshareRef": {
+        "type": "object",
+        "properties": {
+          "carrier": {
+            "type": "string",
+            "example": "A3"
+          },
+          "name": {
+            "type": "string",
+            "example": "Aegean Airlines"
+          },
+          "flightNumber": {
+            "type": "string",
+            "example": "3160"
+          }
+        },
+        "required": [
+          "carrier",
+          "name",
+          "flightNumber"
+        ]
+      },
+      "CountryRef": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "TR"
+          },
+          "name": {
+            "type": "string",
+            "example": "Turkey"
+          },
+          "emoji": {
+            "type": "string",
+            "example": "🇹🇷"
+          },
+          "flagSvg": {
+            "type": "string",
+            "example": "https://api.example.com/v1/flags/tr.svg"
+          },
+          "flagSvgSquare": {
+            "type": "string",
+            "example": "https://api.example.com/v1/flags/tr.svg?shape=1x1"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "emoji",
+          "flagSvg",
+          "flagSvgSquare"
+        ]
+      },
+      "AirportRef": {
+        "type": "object",
+        "properties": {
+          "iata": {
+            "type": "string",
+            "example": "IST"
+          },
+          "icao": {
+            "type": "object",
+            "example": "LTFM"
+          },
+          "code": {
+            "type": "object",
+            "description": "Upstream airport code, may differ from IATA."
+          },
+          "name": {
+            "type": "string",
+            "example": "Istanbul Airport"
+          },
+          "city": {
+            "type": "object",
+            "example": "Istanbul"
+          },
+          "state": {
+            "type": "object",
+            "example": ""
+          },
+          "country": {
+            "$ref": "#/components/schemas/CountryRef"
+          },
+          "timezone": {
+            "type": "object",
+            "example": "Europe/Istanbul"
+          }
+        },
+        "required": [
+          "iata",
+          "name",
+          "country"
+        ]
+      },
+      "FlightTime": {
+        "type": "object",
+        "properties": {
+          "utc": {
+            "type": "string",
+            "example": "2026-09-08T09:10:00.000Z"
+          },
+          "local": {
+            "type": "object",
+            "example": "2026-09-08T12:10:00.000"
+          },
+          "timezone": {
+            "type": "object",
+            "example": "EEST"
+          }
+        },
+        "required": [
+          "utc"
+        ]
+      },
+      "EndpointTimes": {
+        "type": "object",
+        "properties": {
+          "scheduledGate": {
+            "$ref": "#/components/schemas/FlightTime"
+          },
+          "estimatedGate": {
+            "$ref": "#/components/schemas/FlightTime"
+          },
+          "actualGate": {
+            "$ref": "#/components/schemas/FlightTime"
+          },
+          "scheduledRunway": {
+            "$ref": "#/components/schemas/FlightTime"
+          },
+          "estimatedRunway": {
+            "$ref": "#/components/schemas/FlightTime"
+          },
+          "actualRunway": {
+            "$ref": "#/components/schemas/FlightTime"
+          }
+        }
+      },
+      "FlightEndpoint": {
+        "type": "object",
+        "properties": {
+          "airport": {
+            "$ref": "#/components/schemas/AirportRef"
+          },
+          "terminal": {
+            "type": "object",
+            "example": "M"
+          },
+          "gate": {
+            "type": "object",
+            "example": "A11"
+          },
+          "baggage": {
+            "type": "object",
+            "example": "16",
+            "description": "Baggage carousel (arrival only)."
+          },
+          "times": {
+            "$ref": "#/components/schemas/EndpointTimes"
+          },
+          "bestTimeUtc": {
+            "type": "object",
+            "description": "Best known time: actual, else estimated, else scheduled."
+          },
+          "delayMinutes": {
+            "type": "object",
+            "description": "Gate delay in minutes, negative when early."
+          }
+        },
+        "required": [
+          "airport",
+          "times"
+        ]
+      },
+      "FlightStatusInfo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "L",
+            "description": "Upstream status code (S/A/L/C/D/R/U/NO)."
+          },
+          "label": {
+            "type": "string",
+            "example": "Arrived"
+          },
+          "description": {
+            "type": "object",
+            "example": "On time"
+          },
+          "color": {
+            "type": "object",
+            "example": "green"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "boarding",
+              "departed",
+              "en_route",
+              "landed",
+              "arrived",
+              "cancelled",
+              "diverted",
+              "redirected",
+              "unknown"
+            ]
+          },
+          "delayed": {
+            "type": "boolean"
+          },
+          "cancelled": {
+            "type": "boolean"
+          },
+          "diverted": {
+            "type": "boolean"
+          },
+          "departureGateDelayMinutes": {
+            "type": "object"
+          },
+          "arrivalGateDelayMinutes": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "phase",
+          "delayed",
+          "cancelled",
+          "diverted"
+        ]
+      },
+      "EquipmentInfo": {
+        "type": "object",
+        "properties": {
+          "tailNumber": {
+            "type": "object",
+            "example": "TC-LTP"
+          },
+          "iata": {
+            "type": "object",
+            "example": "32Q"
+          },
+          "name": {
+            "type": "object",
+            "example": "Airbus A321neo"
+          },
+          "source": {
+            "type": "object",
+            "example": "Actual"
+          }
+        }
+      },
+      "DurationInfo": {
+        "type": "object",
+        "properties": {
+          "scheduledMinutes": {
+            "type": "object"
+          },
+          "estimatedMinutes": {
+            "type": "object"
+          },
+          "actualMinutes": {
+            "type": "object"
+          }
+        }
+      },
+      "TimelineEntry": {
+        "type": "object",
+        "properties": {
+          "occurredAt": {
+            "type": "string",
+            "example": "2026-09-09T10:38:16.000Z"
+          },
+          "title": {
+            "type": "string",
+            "example": "Time Adjustment"
+          },
+          "source": {
+            "type": "object",
+            "example": "Airline"
+          },
+          "events": {
+            "example": [
+              "Actual Gate Arrival changed to 13:35"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "occurredAt",
+          "title",
+          "events"
+        ]
+      },
+      "FlightLegRef": {
+        "type": "object",
+        "properties": {
+          "providerFlightId": {
+            "type": "object",
+            "example": "1407278900"
+          },
+          "carrier": {
+            "type": "object",
+            "example": "AJA"
+          },
+          "departureIata": {
+            "type": "string",
+            "example": "SAW"
+          },
+          "arrivalIata": {
+            "type": "string",
+            "example": "AMS"
+          },
+          "scheduledDepartureLocal": {
+            "type": "object",
+            "example": "08:45"
+          },
+          "scheduledArrivalLocal": {
+            "type": "object",
+            "example": "11:30"
+          },
+          "selected": {
+            "type": "boolean",
+            "description": "True for the leg this snapshot describes."
+          }
+        },
+        "required": [
+          "departureIata",
+          "arrivalIata",
+          "selected"
+        ]
+      },
+      "FlightSnapshot": {
+        "type": "object",
+        "properties": {
+          "flightKey": {
+            "type": "string",
+            "example": "TK1848:2026-09-08"
+          },
+          "carrierCode": {
+            "type": "string",
+            "example": "TK"
+          },
+          "flightNumber": {
+            "type": "string",
+            "example": "1848"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-09-08",
+            "description": "Local departure date at the origin."
+          },
+          "providerFlightId": {
+            "type": "object",
+            "example": "1407084032"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "example": "2026-09-09T13:20:00.000Z"
+          },
+          "carrier": {
+            "$ref": "#/components/schemas/CarrierRef"
+          },
+          "operatedBy": {
+            "type": "object",
+            "example": "AnadoluJet"
+          },
+          "codeshares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeshareRef"
+            }
+          },
+          "departure": {
+            "$ref": "#/components/schemas/FlightEndpoint"
+          },
+          "arrival": {
+            "$ref": "#/components/schemas/FlightEndpoint"
+          },
+          "diverted": {
+            "$ref": "#/components/schemas/FlightEndpoint"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FlightStatusInfo"
+          },
+          "equipment": {
+            "$ref": "#/components/schemas/EquipmentInfo"
+          },
+          "duration": {
+            "$ref": "#/components/schemas/DurationInfo"
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimelineEntry"
+            }
+          },
+          "alternates": {
+            "description": "Every leg the upstream lists for this flight number on this date.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlightLegRef"
+            }
+          },
+          "fingerprint": {
+            "type": "string",
+            "example": "9f2b..."
+          }
+        },
+        "required": [
+          "flightKey",
+          "carrierCode",
+          "flightNumber",
+          "date",
+          "fetchedAt",
+          "carrier",
+          "codeshares",
+          "departure",
+          "arrival",
+          "status",
+          "equipment",
+          "duration",
+          "timeline",
+          "alternates",
+          "fingerprint"
+        ]
+      },
+      "FlightTimeline": {
+        "type": "object",
+        "properties": {
+          "flightKey": {
+            "type": "string",
+            "example": "TK1848:2026-09-08@ATH-IST"
+          },
+          "count": {
+            "type": "number",
+            "example": 1
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimelineEntry"
+            }
+          }
+        },
+        "required": [
+          "flightKey",
+          "count",
+          "data"
+        ]
+      },
+      "CreateSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "carrier": {
+            "type": "string",
+            "example": "TK"
+          },
+          "flightNumber": {
+            "type": "string",
+            "example": "1848"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-09-08"
+          },
+          "origin": {
+            "type": "string",
+            "example": "IST",
+            "description": "Departure airport. Required when the flight number operates more than one leg on that date; the error response lists the available legs."
+          },
+          "destination": {
+            "type": "string",
+            "example": "JFK",
+            "description": "Arrival airport, to narrow further."
+          },
+          "flightId": {
+            "type": "string",
+            "example": "1407266450",
+            "description": "Provider flight id from a search response's `alternates`. Exact match."
+          },
+          "webhookUrl": {
+            "type": "string",
+            "example": "https://example.com/hooks/flights"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Bring your own signing secret. One is generated when omitted.",
+            "example": "whsec_my_own_secret"
+          },
+          "events": {
+            "type": "array",
+            "description": "Change types to deliver. Defaults to all of them.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "status.changed",
+                "flight.departed",
+                "flight.arrived",
+                "flight.cancelled",
+                "flight.diverted",
+                "flight.reinstated",
+                "departure.gate.changed",
+                "departure.terminal.changed",
+                "arrival.gate.changed",
+                "arrival.terminal.changed",
+                "arrival.baggage.changed",
+                "departure.scheduled.changed",
+                "departure.estimated.changed",
+                "departure.actual.changed",
+                "arrival.scheduled.changed",
+                "arrival.estimated.changed",
+                "arrival.actual.changed",
+                "delay.increased",
+                "delay.decreased",
+                "aircraft.changed",
+                "aircraft.tail.changed",
+                "route.changed",
+                "codeshares.changed"
+              ]
+            }
+          },
+          "delayThresholdMinutes": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1,
+            "maximum": 240
+          },
+          "headers": {
+            "type": "object",
+            "description": "Extra headers to send with each webhook."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Opaque data echoed back in every webhook."
+          }
+        },
+        "required": [
+          "carrier",
+          "flightNumber",
+          "date",
+          "webhookUrl"
+        ]
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "sub_7Kd91mQx0Zb2"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "paused",
+              "completed",
+              "suspended"
+            ]
+          },
+          "flightKey": {
+            "type": "string",
+            "example": "TK1848:2026-09-08"
+          },
+          "carrier": {
+            "type": "string",
+            "example": "TK"
+          },
+          "flightNumber": {
+            "type": "string",
+            "example": "1848"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-09-08"
+          },
+          "webhookUrl": {
+            "type": "string",
+            "example": "https://example.com/hooks/flights"
+          },
+          "secret": {
+            "type": "string",
+            "example": "whsec_...",
+            "description": "HMAC-SHA256 signing secret. Returned in full only at creation."
+          },
+          "headers": {
+            "type": "object",
+            "description": "Extra headers sent with every delivery."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "status.changed",
+                "flight.departed",
+                "flight.arrived",
+                "flight.cancelled",
+                "flight.diverted",
+                "flight.reinstated",
+                "departure.gate.changed",
+                "departure.terminal.changed",
+                "arrival.gate.changed",
+                "arrival.terminal.changed",
+                "arrival.baggage.changed",
+                "departure.scheduled.changed",
+                "departure.estimated.changed",
+                "departure.actual.changed",
+                "arrival.scheduled.changed",
+                "arrival.estimated.changed",
+                "arrival.actual.changed",
+                "delay.increased",
+                "delay.decreased",
+                "aircraft.changed",
+                "aircraft.tail.changed",
+                "route.changed",
+                "codeshares.changed"
+              ]
+            }
+          },
+          "delayThresholdMinutes": {
+            "type": "number",
+            "example": 1,
+            "description": "Ignore delay swings smaller than this."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Opaque data echoed back in every webhook."
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "lastPolledAt": {
+            "type": "object"
+          },
+          "lastChangeAt": {
+            "type": "object"
+          },
+          "lastDeliveryAt": {
+            "type": "object"
+          },
+          "deliveredCount": {
+            "type": "number",
+            "example": 0
+          },
+          "failedCount": {
+            "type": "number",
+            "example": 0
+          },
+          "flightResolved": {
+            "type": "boolean",
+            "example": true,
+            "description": "False while the flight has not been found upstream yet."
+          },
+          "statusReason": {
+            "type": "object",
+            "description": "Why the subscription was suspended or completed."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "flightKey",
+          "carrier",
+          "flightNumber",
+          "date",
+          "webhookUrl",
+          "secret",
+          "events",
+          "delayThresholdMinutes",
+          "createdAt",
+          "updatedAt",
+          "deliveredCount",
+          "failedCount",
+          "flightResolved"
+        ]
+      },
+      "UpdateSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "webhookUrl": {
+            "type": "string",
+            "example": "https://example.com/hooks/v2"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "status.changed",
+                "flight.departed",
+                "flight.arrived",
+                "flight.cancelled",
+                "flight.diverted",
+                "flight.reinstated",
+                "departure.gate.changed",
+                "departure.terminal.changed",
+                "arrival.gate.changed",
+                "arrival.terminal.changed",
+                "arrival.baggage.changed",
+                "departure.scheduled.changed",
+                "departure.estimated.changed",
+                "departure.actual.changed",
+                "arrival.scheduled.changed",
+                "arrival.estimated.changed",
+                "arrival.actual.changed",
+                "delay.increased",
+                "delay.decreased",
+                "aircraft.changed",
+                "aircraft.tail.changed",
+                "route.changed",
+                "codeshares.changed"
+              ]
+            }
+          },
+          "delayThresholdMinutes": {
+            "type": "number",
+            "example": 5,
+            "minimum": 1,
+            "maximum": 240
+          },
+          "headers": {
+            "type": "object"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKey": []
+    }
+  ]
+}

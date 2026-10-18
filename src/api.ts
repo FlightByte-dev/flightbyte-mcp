@@ -74,7 +74,7 @@ export class ApiClient {
     } catch (err) {
       const message =
         err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')
-          ? `no response within ${Math.round(this.#timeoutMs / 1000)}s`
+          ? `no response within ${Math.ceil(this.#timeoutMs / 1000)}s`
           : describeFetchError(err);
       return { kind: 'network_error', url, message };
     }

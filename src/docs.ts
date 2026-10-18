@@ -31,11 +31,35 @@ export interface SearchHit {
   score: number;
 }
 
-const PAGE_SEPARATOR = /\n---\n\n(?=# )/;
+/** Split at "---" lines followed by a blank line and a "# " title, ignoring any inside code fences (e.g. a SKILL.md example). */
+function splitPages(text: string): string[] {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const chunks: string[] = [];
+  let start = 0;
+  let fence: string | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    fence = trackFence(line, fence);
+    if (fence === null && line === '---' && lines[i + 1] === '' && lines[i + 2]?.startsWith('# ')) {
+      chunks.push(lines.slice(start, i).join('\n'));
+      start = i + 2;
+    }
+  }
+  chunks.push(lines.slice(start).join('\n'));
+  return chunks;
+}
+
+/** The fence that is open after this line: null outside code blocks. */
+function trackFence(line: string, open: string | null): string | null {
+  const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
+  if (!marker) return open;
+  if (open === null) return marker;
+  return marker[0] === open[0] && marker.length >= open.length ? null : open;
+}
 
 export function parseLlmsFull(text: string): DocPage[] {
   const pages: DocPage[] = [];
-  for (const chunk of text.replace(/\r\n/g, '\n').split(PAGE_SEPARATOR)) {
+  for (const chunk of splitPages(text)) {
     const markdown = chunk.trim();
     const lines = markdown.split('\n');
     const title = lines[0]?.match(/^# (.+)$/)?.[1]?.trim();
@@ -65,15 +89,9 @@ function splitSections(page: DocPage, lines: string[]): DocSection[] {
   };
 
   for (const line of lines) {
-    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
-    if (fenceMatch) {
-      const marker = fenceMatch[1]!;
-      if (fence === null) fence = marker[0]!.repeat(marker.length);
-      else if (marker.startsWith(fence)) fence = null;
-      buffer.push(line);
-      continue;
-    }
-    const heading = fence === null ? line.match(/^(#{2,3}) (.+)$/) : null;
+    const wasInFence = fence !== null;
+    fence = trackFence(line, fence);
+    const heading = !wasInFence && fence === null ? line.match(/^(#{2,3}) (.+)$/) : null;
     if (heading) {
       flush();
       const text = heading[2]!.trim();
@@ -150,7 +168,9 @@ export interface SearchIndex {
 
 const WEIGHT_HEADING = 3;
 const WEIGHT_TITLE = 2;
-const WEIGHT_DESCRIPTION = 1;
+const WEIGHT_DESCRIPTION = 0.5;
+const WEIGHT_CODE = 0.3;
+const MIN_LENGTH = 30;
 const K1 = 1.2;
 const B = 0.75;
 
@@ -165,23 +185,38 @@ export function buildIndex(pages: DocPage[]): SearchIndex {
       const add = (tokens: string[], weight: number) => {
         for (const t of tokens) tf.set(t, (tf.get(t) ?? 0) + weight);
       };
-      const bodyTokens = tokenize(section.text);
+      // Code is mostly identifiers and punctuation: it counts, but lightly, and does not make a section "long".
+      const { prose, code } = splitCode(section.text);
+      const bodyTokens = tokenize(prose);
       add(bodyTokens, 1);
+      add(tokenize(code), WEIGHT_CODE);
       add(tokenize(section.heading ?? ''), WEIGHT_HEADING);
       add(titleTokens, WEIGHT_TITLE);
-      // The description summarises the page's opening, so it counts there in full and elsewhere at half.
-      add(descriptionTokens, section.heading === null ? WEIGHT_DESCRIPTION : WEIGHT_DESCRIPTION / 2);
+      add(descriptionTokens, WEIGHT_DESCRIPTION);
       for (const t of tf.keys()) df.set(t, (df.get(t) ?? 0) + 1);
       sections.push({
         section,
         tf,
-        length: bodyTokens.length,
+        // A floor, so a one-line section does not outrank the section that actually explains the topic.
+        length: Math.max(bodyTokens.length, MIN_LENGTH),
         lowerText: `${page.title} ${section.heading ?? ''} ${section.text}`.toLowerCase(),
       });
     }
   }
   const avgLength = sections.reduce((sum, s) => sum + s.length, 0) / Math.max(1, sections.length);
   return { pages, sections, df, avgLength };
+}
+
+function splitCode(text: string): { prose: string; code: string } {
+  const prose: string[] = [];
+  const code: string[] = [];
+  let fence: string | null = null;
+  for (const line of text.split('\n')) {
+    const wasInFence = fence !== null;
+    fence = trackFence(line, fence);
+    (wasInFence || fence !== null ? code : prose).push(line);
+  }
+  return { prose: prose.join('\n'), code: code.join('\n') };
 }
 
 export function search(index: SearchIndex, query: string, limit = 5): SearchHit[] {
@@ -229,24 +264,29 @@ export function search(index: SearchIndex, query: string, limit = 5): SearchHit[
     if (terms.length > 1 && phrase.length > 3 && entry.lowerText.includes(phrase)) score *= 1.5;
     // The reference pages are generated and long; the hand-written docs explain things.
     const url = entry.section.page.url;
-    if (/\/docs(\/|$)/.test(url) && !url.includes('/docs/reference/')) score *= 1.1;
+    if (/\/docs(\/|$)/.test(url) && !url.includes('/docs/reference/')) score *= 1.25;
     scored.push({ entry, score });
   }
   scored.sort((a, b) => b.score - a.score);
 
   const hits: SearchHit[] = [];
   const perPage = new Map<string, number>();
+  const snippets = new Set<string>();
   for (const { entry, score } of scored) {
     const { page, heading, anchor } = entry.section;
     const count = perPage.get(page.url) ?? 0;
     if (count >= 2) continue;
+    // Generated reference pages repeat the same boilerplate sections; show each text once.
+    const text = snippet(entry.section.text || page.description, terms);
+    if (snippets.has(text)) continue;
+    snippets.add(text);
     perPage.set(page.url, count + 1);
     hits.push({
       title: heading ? `${page.title} › ${heading}` : page.title,
       page: page.title,
       section: heading,
       url: anchor ? `${page.url}#${anchor}` : page.url,
-      snippet: snippet(entry.section.text || page.description, terms),
+      snippet: text,
       score: Math.round(score * 100) / 100,
     });
     if (hits.length >= limit) break;

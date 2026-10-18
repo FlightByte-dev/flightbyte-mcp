@@ -1,0 +1,118 @@
+# FlightByte documentation
+
+> Flight intelligence, byte by byte.
+
+Base URL: https://api.flightbyte.dev/v1. Authentication: the `x-api-key` header.
+
+---
+
+# Introduction
+
+> What FlightByte does, the two requests most integrations are made of, and where to go next.
+
+Source: https://flightbyte.dev/docs
+
+FlightByte is a flight status API built for the code on the receiving end. Look a flight up, or ask it to watch one.
+
+## The shape of it
+
+Everything lives under one base URL and one header.
+
+```bash
+# Look a flight up
+curl "https://api.flightbyte.dev/v1/flights/TK/1848/2026-09-12" -H "x-api-key: $FLIGHTBYTE_KEY"
+```
+
+---
+
+# Authentication and quotas
+
+> The API key header, the quota windows on every key, and what a 429 looks like.
+
+Source: https://flightbyte.dev/docs/authentication
+
+## The key
+
+Every request carries your key in the `x-api-key` header. `Authorization: Bearer <key>` is accepted too.
+
+## Quotas
+
+Your keys share three independent windows: requests per minute, per day and per month. Free has a cap of 3 watched flights; the fourth is refused with `402` and `watched_flight_limit`.
+
+## When a window is full
+
+The request is refused with `429`, a `Retry-After` header, and a body that names the window and `retryAfterSeconds`. Wait that long before retrying.
+
+---
+
+# Flights
+
+> Looking flights up, choosing a leg when a number flies twice, the timeline, and how caching works.
+
+Source: https://flightbyte.dev/docs/flights
+
+## Looking a flight up
+
+Address a flight by carrier, flight number and the local departure date at the origin.
+
+## Leg selection
+
+Flight numbers are not unique within a day. `TK1` operates two legs: SAW to AMS in the morning and IST to JFK in the afternoon. Pass `origin` to choose the leg; a subscription without a selector is refused with `400` and the list of `legs`.
+
+## Caching
+
+Lookups are served from cache while fresh; `refresh=true` skips it.
+
+---
+
+# Webhooks
+
+> The delivery format, every event and change type, how to verify signatures, and what retries look like.
+
+Source: https://flightbyte.dev/docs/webhooks
+
+A webhook is a `POST` with a JSON body to your subscription's URL.
+
+## Change types
+
+Values for the `events` filter: `flight.departed`, `flight.arrived`, `departure.gate.changed`, `arrival.baggage.changed`.
+
+## Verifying a delivery
+
+The signature header is `t=<unix seconds>,v1=<hex>` where `v1` is HMAC-SHA256 of the timestamp and the raw body. Verify the signature against the raw bytes before parsing JSON.
+
+```md
+---
+
+# Not a page: a SKILL.md example inside a code fence
+
+## Not a section either
+```
+
+## Retries and suspension
+
+Failed deliveries are retried up to 8 times with exponential backoff. Twenty consecutive failures suspend the subscription.
+
+---
+
+# Verifying webhook signatures the right way
+
+> Raw body, timing-safe compare, replay window: the three ways signature verification goes wrong.
+
+Source: https://flightbyte.dev/guides/verifying-webhook-signatures
+
+A webhook is an unauthenticated POST from the internet. The signature is what makes it yours.
+
+## Mistake one: verifying the wrong bytes
+
+Frameworks parse JSON before your handler runs. Verify the signature against the raw body.
+
+---
+
+# Flight phase
+
+> Where a flight is in its life, as one of ten values from scheduled to arrived.
+
+Source: https://flightbyte.dev/glossary/flight-phase
+
+The phase is derived from the airline status code and the times that exist: scheduled, boarding, departed, en_route, landed, arrived, cancelled, diverted, redirected, unknown.
