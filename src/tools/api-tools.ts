@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/server';
 import type { ApiClient, ApiRequest, HttpMethod } from '../api.js';
 import { apiErrorResult, missingKeyError } from '../errors.js';
 
@@ -468,8 +468,8 @@ export function buildRequest(def: ApiToolDef, args: Record<string, unknown>): Ap
   return request;
 }
 
-export function inputShape(def: ApiToolDef): Record<string, z.ZodType> {
-  return Object.fromEntries(Object.entries(def.params).map(([name, p]) => [name, p.schema]));
+export function inputSchema(def: ApiToolDef) {
+  return z.object(Object.fromEntries(Object.entries(def.params).map(([name, p]) => [name, p.schema])));
 }
 
 export async function runApiTool(def: ApiToolDef, client: ApiClient, args: Record<string, unknown>): Promise<CallToolResult> {

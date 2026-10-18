@@ -6,13 +6,14 @@ import { clientIp, createHttpApp, extractApiKey, RateLimiter } from '../src/http
 
 describe('extractApiKey', () => {
   it('reads Bearer tokens and x-api-key, preferring Authorization', () => {
-    expect(extractApiKey({ authorization: 'Bearer abc123' })).toBe('abc123');
-    expect(extractApiKey({ authorization: 'bearer   abc123  ' })).toBe('abc123');
-    expect(extractApiKey({ 'x-api-key': ' xyz ' })).toBe('xyz');
-    expect(extractApiKey({ authorization: 'Bearer abc', 'x-api-key': 'xyz' })).toBe('abc');
-    expect(extractApiKey({ authorization: 'Basic dXNlcjpwYXNz', 'x-api-key': 'xyz' })).toBe('xyz');
-    expect(extractApiKey({ authorization: 'Basic dXNlcjpwYXNz' })).toBeUndefined();
-    expect(extractApiKey({})).toBeUndefined();
+    const key = (headers: Record<string, string>) => extractApiKey(new Headers(headers));
+    expect(key({ authorization: 'Bearer abc123' })).toBe('abc123');
+    expect(key({ authorization: 'bearer   abc123  ' })).toBe('abc123');
+    expect(key({ 'x-api-key': ' xyz ' })).toBe('xyz');
+    expect(key({ authorization: 'Bearer abc', 'x-api-key': 'xyz' })).toBe('abc');
+    expect(key({ authorization: 'Basic dXNlcjpwYXNz', 'x-api-key': 'xyz' })).toBe('xyz');
+    expect(key({ authorization: 'Basic dXNlcjpwYXNz' })).toBeUndefined();
+    expect(key({})).toBeUndefined();
   });
 });
 

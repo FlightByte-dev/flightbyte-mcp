@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { loadConfig, VERSION } from './config.js';
 import { DocsStore } from './docs.js';
 import { createServer } from './server.js';
@@ -24,13 +24,16 @@ Docs: https://flightbyte.dev/docs/ai`);
 
 const config = loadConfig();
 const apiKey = process.env.FLIGHTBYTE_KEY?.trim() || undefined;
-const server = createServer({ apiUrl: config.apiUrl, apiKey, docs: new DocsStore({ docsUrl: config.docsUrl }) });
+const docs = new DocsStore({ docsUrl: config.docsUrl });
 
-await server.connect(new StdioServerTransport());
+// The client's opening message picks the protocol era (2025 initialize or 2026-07-28); one server instance serves the connection.
+const connection = serveStdio(() => createServer({ apiUrl: config.apiUrl, apiKey, docs }), {
+  onerror: (err) => console.error(`stdio error: ${err.message}`),
+});
 console.error(`flightbyte-mcp ${VERSION} running on stdio (${apiKey ? 'API key set' : 'no FLIGHTBYTE_KEY: docs tools only'})`);
 
 const shutdown = () => {
-  void server.close().finally(() => process.exit(0));
+  void connection.close().finally(() => process.exit(0));
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

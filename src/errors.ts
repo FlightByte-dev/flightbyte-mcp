@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import type { ApiResult } from './api.js';
 import { KEYS_URL, PLAN_URL, REMOTE_URL, SIGNUP_URL } from './config.js';
 

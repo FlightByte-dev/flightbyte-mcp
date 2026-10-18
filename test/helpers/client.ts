@@ -1,6 +1,4 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { Client, InMemoryTransport, type CallToolResult } from '@modelcontextprotocol/client';
 import { DocsStore } from '../../src/docs.js';
 import { createServer } from '../../src/server.js';
 import type { MockFlightByte } from './mock.js';
@@ -23,7 +21,7 @@ export async function connect(mock: MockFlightByte, options: { apiKey?: string |
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
   return {
     client,
-    call: async (name, args = {}) => (await client.callTool({ name, arguments: args })) as CallToolResult,
+    call: (name, args = {}) => client.callTool({ name, arguments: args }),
     close: async () => {
       await client.close();
       await server.close();

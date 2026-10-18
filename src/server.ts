@@ -1,9 +1,8 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
 import { ApiClient } from './api.js';
 import { VERSION } from './config.js';
 import { DocsStore } from './docs.js';
-import { API_TOOLS, inputShape, runApiTool } from './tools/api-tools.js';
+import { API_TOOLS, inputSchema, runApiTool } from './tools/api-tools.js';
 import { registerDocsTools } from './tools/docs-tools.js';
 
 export { VERSION } from './config.js';
@@ -30,7 +29,8 @@ export interface ServerOptions {
 export function createServer(options: ServerOptions): McpServer {
   const server = new McpServer(
     { name: 'flightbyte', title: 'FlightByte', version: VERSION, websiteUrl: 'https://flightbyte.dev/docs/ai' },
-    { instructions: INSTRUCTIONS, capabilities: { tools: {} } },
+    // The tool list never changes, so clients have nothing to listen for.
+    { instructions: INSTRUCTIONS, capabilities: { tools: { listChanged: false } } },
   );
   const client = new ApiClient({ baseUrl: options.apiUrl, apiKey: options.apiKey, fetch: options.fetch });
 
@@ -39,7 +39,7 @@ export function createServer(options: ServerOptions): McpServer {
   for (const def of API_TOOLS) {
     server.registerTool(
       def.name,
-      { title: def.title, description: def.description, inputSchema: inputShape(def), annotations: def.annotations },
+      { title: def.title, description: def.description, inputSchema: inputSchema(def), annotations: def.annotations },
       async (args: Record<string, unknown>): Promise<CallToolResult> => runApiTool(def, client, args),
     );
   }

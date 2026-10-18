@@ -15,7 +15,7 @@ const allowedHosts = (process.env.ALLOWED_HOSTS ?? '')
   .filter(Boolean);
 if (allowedHosts.length === 0 && loopback) allowedHosts.push('localhost', '127.0.0.1', '[::1]');
 
-const { handler, limiter } = createHttpApp({
+const app = createHttpApp({
   apiUrl: config.apiUrl,
   docs: new DocsStore({ docsUrl: config.docsUrl }),
   rateLimitPerMinute: intEnv('RATE_LIMIT_PER_MINUTE', 120),
@@ -23,12 +23,12 @@ const { handler, limiter } = createHttpApp({
   allowedHosts,
 });
 
-const server = createHttpServer((req, res) => void handler(req, res));
+const server = createHttpServer((req, res) => void app.handler(req, res));
 server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
 server.requestTimeout = 120_000;
 
-const sweeper = setInterval(() => limiter?.sweep(), 60_000);
+const sweeper = setInterval(() => app.limiter?.sweep(), 60_000);
 sweeper.unref();
 
 server.listen(port, host, () => {
@@ -39,6 +39,8 @@ server.listen(port, host, () => {
 
 const shutdown = (signal: string) => {
   console.error(`${signal} received, closing`);
+  // End in-flight 2026-era exchanges so open streams do not hold the server past the grace period.
+  void app.close();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 10_000).unref();
 };

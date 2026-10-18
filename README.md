@@ -152,6 +152,8 @@ The hosted server can also be added under **Settings → Connectors → Add cust
 - Streamable HTTP: `https://mcp.flightbyte.dev/mcp`, header `Authorization: Bearer YOUR_FLIGHTBYTE_KEY` (or `x-api-key: YOUR_FLIGHTBYTE_KEY`).
 - stdio: command `npx`, arguments `-y @flightbyte/mcp`, environment `FLIGHTBYTE_KEY=YOUR_FLIGHTBYTE_KEY`.
 
+Both transports speak MCP 2026-07-28 and the 2025 revisions (2024-11-05 to 2025-11-25): the client's first message picks one.
+
 ## Configuration
 
 | Variable | Used by | Default | Meaning |
@@ -169,7 +171,7 @@ The hosted server can also be added under **Settings → Connectors → Add cust
 
 `npm run start:http` (or the Docker image) serves:
 
-- `POST /mcp`: MCP over Streamable HTTP in stateless mode. Every request gets a fresh server bound to the key in that request's headers; responses are plain JSON, there are no sessions, and `GET`/`DELETE /mcp` answer `405`.
+- `POST /mcp`: MCP over Streamable HTTP in stateless mode. Every request gets a fresh server bound to the key in that request's headers; responses are plain JSON, there are no sessions, and `GET`/`DELETE /mcp` answer `405`. Requests carrying the 2026-07-28 per-request envelope are served by the SDK's `createMcpHandler`; 2025-era requests (`initialize`, then plain JSON-RPC) by a JSON-mode Streamable HTTP transport. The request log notes which (`era=modern` or `era=legacy`).
 - `GET /healthz`: `{"status":"ok","version":"…"}`.
 
 Keys are used for the one request and never stored or logged. The docs index is cached in memory for 15 minutes and shared by all requests. Deployment notes for Dokploy are in [DEPLOY.md](DEPLOY.md).
@@ -186,7 +188,7 @@ npm run typecheck
 npm run lint
 ```
 
-The tests never touch the real API or need a key. They cover the request mapping of every tool, the error mapping, docs parsing and ranking, both transports end to end (the built `dist/stdio.js` and `dist/http.js` are spawned and driven by MCP clients), and a drift check: every API tool's parameters must exist, in the same place and with the same required fields and enums, in `spec/openapi.json`, a vendored copy of [the public OpenAPI document](https://flightbyte.dev/openapi.json). When the API changes:
+The tests never touch the real API or need a key. They cover the request mapping of every tool, the error mapping, docs parsing and ranking, both transports end to end (the built `dist/stdio.js` and `dist/http.js` are spawned and driven by MCP clients on protocol 2025-11-25 and 2026-07-28, including a client built on the v1 SDK, `@modelcontextprotocol/sdk`, which is a dev dependency for that test only), and a drift check: every API tool's parameters must exist, in the same place and with the same required fields and enums, in `spec/openapi.json`, a vendored copy of [the public OpenAPI document](https://flightbyte.dev/openapi.json). When the API changes:
 
 ```bash
 npm run sync:openapi
@@ -219,9 +221,9 @@ curl -s http://127.0.0.1:8080/mcp \
 
 ```text
 src/
-  stdio.ts            bin entry: stdio transport, key from FLIGHTBYTE_KEY
+  stdio.ts            bin entry: stdio transport (serveStdio), key from FLIGHTBYTE_KEY
   http.ts             HTTP entry: POST /mcp, GET /healthz, env config
-  http-app.ts         request handling, key extraction, per-IP rate limit
+  http-app.ts         request handling, era routing, key extraction, per-IP rate limit
   server.ts           createServer(): registers every tool on an McpServer
   tools/api-tools.ts  the 13 API tools, one definition per OpenAPI operation
   tools/docs-tools.ts search_docs and get_doc_page

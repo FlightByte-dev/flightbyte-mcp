@@ -57,11 +57,13 @@
     "prepublishOnly": "npm run check"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/server": "^2.3.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^22.20.5",
     "eslint": "^10.13.0",
     "typescript": "~6.0.3",

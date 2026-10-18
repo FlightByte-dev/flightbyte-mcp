@@ -1,16 +1,12 @@
 /** Spawns the built HTTP entry point (dist/http.js) and talks to POST /mcp with raw JSON-RPC and with the SDK client. */
-import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { ChildProcess } from 'node:child_process';
+import { Client, StreamableHTTPClientTransport, type CallToolResult } from '@modelcontextprotocol/client';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { VERSION } from '../src/config.js';
 import { text } from './helpers/client.js';
+import { startServer, stopServer } from './helpers/http-server.js';
 import { flightSnapshot, MockFlightByte } from './helpers/mock.js';
 
-const entry = fileURLToPath(new URL('../dist/http.js', import.meta.url));
 const BEARER_KEY = 'fb_test_bearer_key_0003';
 const HEADER_KEY = 'fb_test_header_key_0004';
 const mock = new MockFlightByte();
@@ -18,37 +14,6 @@ const mock = new MockFlightByte();
 let child: ChildProcess;
 let base = '';
 let serverLogs: () => string = () => '';
-
-async function startServer(env: Record<string, string>): Promise<{ child: ChildProcess; base: string; logs: () => string }> {
-  const proc = spawn(process.execPath, [entry], {
-    env: { PATH: process.env.PATH ?? '', PORT: '0', HOST: '127.0.0.1', FLIGHTBYTE_API_URL: mock.apiUrl, FLIGHTBYTE_DOCS_URL: mock.url, ...env },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  let output = '';
-  const url = await new Promise<string>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`server did not start:\n${output}`)), 10_000);
-    const onData = (chunk: Buffer) => {
-      output += chunk.toString();
-      const match = output.match(/listening on (http:\/\/\S+)\/mcp/);
-      if (match) {
-        clearTimeout(timer);
-        resolve(match[1]!);
-      }
-    };
-    proc.stdout!.on('data', onData);
-    proc.stderr!.on('data', onData);
-    proc.on('exit', (code) => reject(new Error(`server exited with ${code}:\n${output}`)));
-  });
-  return { child: proc, base: url, logs: () => output };
-}
-
-function stop(proc: ChildProcess): Promise<void> {
-  return new Promise((resolve) => {
-    if (proc.exitCode !== null) return resolve();
-    proc.once('exit', () => resolve());
-    proc.kill('SIGTERM');
-  });
-}
 
 let nextId = 1;
 async function rpc(method: string, params: Record<string, unknown> | undefined, headers: Record<string, string> = {}) {
@@ -61,16 +26,15 @@ async function rpc(method: string, params: Record<string, unknown> | undefined, 
 }
 
 beforeAll(async () => {
-  if (!existsSync(entry)) throw new Error('dist/http.js is missing: run `npm run build` first (npm test does).');
   await mock.start();
-  const started = await startServer({});
+  const started = await startServer(mock);
   child = started.child;
   base = started.base;
   serverLogs = started.logs;
 });
 afterEach(() => mock.reset());
 afterAll(async () => {
-  await stop(child);
+  await stopServer(child);
   await mock.stop();
 });
 
@@ -91,6 +55,14 @@ describe('Streamable HTTP transport', () => {
     const list = await rpc('tools/list', {}, { 'mcp-protocol-version': '2025-11-25' });
     expect(list.status).toBe(200);
     expect((list.body.result!.tools as unknown[]).length).toBe(15);
+  });
+
+  it('initialize accepts the older 2025-era protocol versions', async () => {
+    for (const protocolVersion of ['2025-06-18', '2025-03-26', '2024-11-05']) {
+      const init = await rpc('initialize', { protocolVersion, capabilities: {}, clientInfo: { name: 'raw', version: '0' } });
+      expect(init.status, protocolVersion).toBe(200);
+      expect(init.body.result, protocolVersion).toMatchObject({ protocolVersion, serverInfo: { name: 'flightbyte' } });
+    }
   });
 
   it('tools/call reads the key from Authorization: Bearer, or from x-api-key', async () => {
@@ -119,18 +91,54 @@ describe('Streamable HTTP transport', () => {
     expect(text(docs.body.result as unknown as CallToolResult)).toContain('https://flightbyte.dev/docs/flights#leg-selection');
   });
 
-  it('works with the SDK StreamableHTTPClientTransport', async () => {
-    mock.on('GET', '/v1/subscriptions', { status: 200, body: { total: 0, data: [] } });
-    const client = new Client({ name: 'sdk-http', version: '0' });
-    await client.connect(
-      new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${BEARER_KEY}` } } }),
-    );
+  // Both eras through the SDK client: 2025-11-25 (initialize handshake, today's clients) and 2026-07-28 (server/discover, per-request envelope).
+  for (const era of ['legacy', 'modern'] as const) {
+    it(`works with the SDK StreamableHTTPClientTransport (${era} era)`, async () => {
+      mock.on('GET', '/v1/subscriptions', { status: 200, body: { total: 0, data: [] } });
+      const contentTypes: string[] = [];
+      const client = new Client(
+        { name: `sdk-http-${era}`, version: '0' },
+        era === 'modern' ? { versionNegotiation: { mode: { pin: '2026-07-28' } } } : {},
+      );
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(`${base}/mcp`), {
+          requestInit: { headers: { authorization: `Bearer ${BEARER_KEY}` } },
+          fetch: async (url, init) => {
+            const res = await fetch(url, init);
+            if (res.status === 200) contentTypes.push(res.headers.get('content-type') ?? '');
+            return res;
+          },
+        }),
+      );
+      try {
+        expect(client.getProtocolEra()).toBe(era);
+        expect(client.getNegotiatedProtocolVersion()).toBe(era === 'modern' ? '2026-07-28' : '2025-11-25');
+        expect(client.getServerVersion()).toMatchObject({ name: 'flightbyte', version: VERSION });
+        expect((await client.listTools()).tools).toHaveLength(15);
+        const result = await client.callTool({ name: 'list_subscriptions', arguments: { status: 'active' } });
+        expect(result.structuredContent).toEqual({ total: 0, data: [] });
+        expect(mock.last).toMatchObject({ path: '/v1/subscriptions', query: { status: 'active' } });
+        expect(mock.last!.headers['x-api-key']).toBe(BEARER_KEY);
+        // Plain JSON responses, no SSE, in both eras.
+        expect(contentTypes.length).toBeGreaterThanOrEqual(3);
+        for (const type of contentTypes) expect(type).toContain('application/json');
+      } finally {
+        await client.close();
+      }
+    });
+  }
+
+  it('a 2026-07-28 client with auto negotiation picks the modern era; a key-less one still gets the docs tools', async () => {
+    const client = new Client({ name: 'sdk-http-auto', version: '0' }, { versionNegotiation: { mode: 'auto' } });
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`)));
     try {
-      expect((await client.listTools()).tools).toHaveLength(15);
-      const result = (await client.callTool({ name: 'list_subscriptions', arguments: { status: 'active' } })) as CallToolResult;
-      expect(result.structuredContent).toEqual({ total: 0, data: [] });
-      expect(mock.last).toMatchObject({ path: '/v1/subscriptions', query: { status: 'active' } });
-      expect(mock.last!.headers['x-api-key']).toBe(BEARER_KEY);
+      expect(client.getProtocolEra()).toBe('modern');
+      const api = await client.callTool({ name: 'get_subscription', arguments: { id: 'sub_1' } });
+      expect(api.isError).toBe(true);
+      expect(text(api)).toContain('Authorization: Bearer <key>');
+      const docs = await client.callTool({ name: 'search_docs', arguments: { query: 'leg selection origin' } });
+      expect(text(docs)).toContain('https://flightbyte.dev/docs/flights#leg-selection');
+      expect(mock.apiRequests).toHaveLength(0);
     } finally {
       await client.close();
     }
@@ -178,7 +186,8 @@ describe('Streamable HTTP transport', () => {
     // Runs last in this file; the logs cover every request above.
     const output = serverLogs();
     expect(output).toContain('POST /mcp 200');
-    expect(output).toContain('tools/call:get_flight key=yes');
+    expect(output).toContain('tools/call:get_flight key=yes era=legacy');
+    expect(output).toContain('tools/call:list_subscriptions key=yes era=modern');
     expect(output).not.toContain(BEARER_KEY);
     expect(output).not.toContain(HEADER_KEY);
   });
@@ -186,7 +195,7 @@ describe('Streamable HTTP transport', () => {
 
 describe('per-IP rate limit', () => {
   it('answers 429 with Retry-After past the limit, and keeps /healthz open', async () => {
-    const limited = await startServer({ RATE_LIMIT_PER_MINUTE: '3' });
+    const limited = await startServer(mock, { RATE_LIMIT_PER_MINUTE: '3' });
     try {
       const post = () =>
         fetch(`${limited.base}/mcp`, {
@@ -203,7 +212,7 @@ describe('per-IP rate limit', () => {
       expect(await refused.json()).toMatchObject({ jsonrpc: '2.0', error: { message: expect.stringContaining('Too many requests') } });
       expect((await fetch(`${limited.base}/healthz`)).status).toBe(200);
     } finally {
-      await stop(limited.child);
+      await stopServer(limited.child);
     }
   });
 });
