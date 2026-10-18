@@ -271,7 +271,7 @@ export const API_TOOLS: ApiToolDef[] = [
       const lines = [
         'Subscription created.',
         'IMPORTANT: `secret` below is the webhook signing secret, shown in full only in this response; later reads show only `secretHint`. ' +
-          'Give it to the user now so they can store it (for example as an environment variable on their webhook receiver) and verify the HMAC-SHA256 signature on every delivery. ' +
+          'Give it to the user now so they can store it on their webhook receiver (the docs call it FLIGHTBYTE_WEBHOOK_SECRET) and verify the HMAC-SHA256 signature on every delivery. ' +
           'This MCP server cannot reveal or rotate it later; that is done in the FlightByte dashboard or the API.',
       ];
       if (sub?.status === 'pending') {

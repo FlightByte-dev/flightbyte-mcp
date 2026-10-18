@@ -4,7 +4,8 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { DocsStore } from '../docs.js';
 import { toolError } from '../errors.js';
 
-export const DOCS_TOOL_NAMES = ['search_docs', 'get_doc_page'] as const;
+/** Path and URL parts that say nothing about which page was meant. */
+const ROOT_WORDS = new Set(['docs', 'guides', 'glossary', 'reference', 'md', 'http', 'https', 'www', 'flightbyte', 'dev']);
 
 export function registerDocsTools(server: McpServer, docs: DocsStore): void {
   server.registerTool(
@@ -80,8 +81,11 @@ export function registerDocsTools(server: McpServer, docs: DocsStore): void {
       if (page.status === 'not_found') {
         let suggestions = '';
         try {
-          const words = path.split(/[/#?.-]+/).filter(Boolean).join(' ');
-          const hits = await docs.search(words, 3);
+          const words = path
+            .split(/[/#?.:-]+/)
+            .filter((w) => w && !ROOT_WORDS.has(w.toLowerCase()))
+            .join(' ');
+          const hits = words ? await docs.search(words, 3) : [];
           if (hits.length > 0) suggestions = `\nClosest pages: ${hits.map((h) => h.url.split('#')[0]).filter((u, i, a) => a.indexOf(u) === i).join(', ')}`;
         } catch {
           // Suggestions are a courtesy; the error stands without them.
