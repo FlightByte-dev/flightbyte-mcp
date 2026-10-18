@@ -1,65 +1,140 @@
-# FlightByte MCP server
+<p align="center">
+  <a href="https://flightbyte.dev">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+      <img src="assets/logo-light.svg" alt="FlightByte" width="340">
+    </picture>
+  </a>
+</p>
 
-[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=flightbyte&config=eyJ1cmwiOiJodHRwczovL21jcC5mbGlnaHRieXRlLmRldi9tY3AiLCJoZWFkZXJzIjp7IkF1dGhvcml6YXRpb24iOiJCZWFyZXIgWU9VUl9GTElHSFRCWVRFX0tFWSJ9fQ%3D%3D)
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=flightbyte&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22flightbyte_key%22%2C%22description%22%3A%22FlightByte%20API%20key%22%2C%22password%22%3Atrue%7D%5D&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.flightbyte.dev%2Fmcp%22%2C%22headers%22%3A%7B%22Authorization%22%3A%22Bearer%20%24%7Binput%3Aflightbyte_key%7D%22%7D%7D)
+<h3 align="center">The FlightByte MCP server</h3>
 
-[FlightByte](https://flightbyte.dev) is a flight status API with signed webhooks. This [Model Context Protocol](https://modelcontextprotocol.io) server lets an AI assistant use it directly: look a flight up by carrier, number and date, watch it with a webhook subscription, manage and debug those subscriptions, and search the FlightByte documentation while it writes your integration.
+<p align="center">
+  Live flight status and flight webhooks as tools for your AI assistant.<br>
+  Look flights up, watch them with signed webhooks, debug deliveries and search the docs<br>
+  from Claude, Cursor, VS Code or any MCP client.
+</p>
 
-It is a thin client over the public API at `https://api.flightbyte.dev/v1` and the docs at `https://flightbyte.dev/docs`, and it ships two ways from one codebase:
+<p align="center">
+  <a href="https://www.npmjs.com/package/@flightbyte/mcp"><img src="https://img.shields.io/npm/v/@flightbyte/mcp?style=flat-square&color=EF6A1A&label=npm" alt="npm version"></a>
+  <a href="https://mcp.flightbyte.dev/healthz"><img src="https://img.shields.io/website?url=https%3A%2F%2Fmcp.flightbyte.dev%2Fhealthz&style=flat-square&label=hosted&up_message=online&up_color=EF6A1A" alt="Hosted server status"></a>
+  <img src="https://img.shields.io/badge/MCP-2025--11--25_%7C_2026--07--28-121212?style=flat-square" alt="MCP protocol versions">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-121212?style=flat-square" alt="MIT license"></a>
+</p>
 
-| | How | Key |
-| --- | --- | --- |
-| **Hosted** | `https://mcp.flightbyte.dev/mcp` (Streamable HTTP) | `Authorization: Bearer <key>` header (or `x-api-key`) |
-| **Local** | `npx -y @flightbyte/mcp` (stdio) | `FLIGHTBYTE_KEY` environment variable |
+<p align="center">
+  <a href="https://flightbyte.dev/docs/ai"><b>Docs</b></a> ·
+  <a href="https://app.flightbyte.dev/signup"><b>Get a free key</b></a> ·
+  <a href="https://flightbyte.dev/docs/reference"><b>API reference</b></a> ·
+  <a href="https://t.me/flightbyte"><b>Support</b></a>
+</p>
 
-Get a free key at [app.flightbyte.dev/signup](https://app.flightbyte.dev/signup). The docs tools work without one.
+<p align="center">
+  <a href="https://cursor.com/en/install-mcp?name=flightbyte&config=eyJ1cmwiOiJodHRwczovL21jcC5mbGlnaHRieXRlLmRldi9tY3AiLCJoZWFkZXJzIjp7IkF1dGhvcml6YXRpb24iOiJCZWFyZXIgWU9VUl9GTElHSFRCWVRFX0tFWSJ9fQ%3D%3D"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add to Cursor" height="32"></a>
+  &nbsp;
+  <a href="https://vscode.dev/redirect/mcp/install?name=flightbyte&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22flightbyte_key%22%2C%22description%22%3A%22FlightByte%20API%20key%22%2C%22password%22%3Atrue%7D%5D&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.flightbyte.dev%2Fmcp%22%2C%22headers%22%3A%7B%22Authorization%22%3A%22Bearer%20%24%7Binput%3Aflightbyte_key%7D%22%7D%7D"><img src="https://img.shields.io/badge/VS_Code-Install_server-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Install in VS Code" height="32"></a>
+</p>
+
+---
+
+## Quick start
+
+1. Get a free API key at [app.flightbyte.dev/signup](https://app.flightbyte.dev/signup).
+2. Connect the server. Use the hosted one, or run it locally:
+
+   | | Address | Key |
+   | --- | --- | --- |
+   | **Hosted** | `https://mcp.flightbyte.dev/mcp` | `Authorization: Bearer <key>` header |
+   | **Local** | `npx -y @flightbyte/mcp` | `FLIGHTBYTE_KEY` environment variable |
+
+   In Claude Code, for example:
+
+   ```bash
+   claude mcp add --transport http flightbyte https://mcp.flightbyte.dev/mcp \
+     --header "Authorization: Bearer $FLIGHTBYTE_KEY"
+   ```
+
+   Every other client is under [Install](#install).
+3. Ask: *"Is TK1848 on time today?"*
+
+The docs tools work without a key, so an assistant can read the documentation before you have signed up.
+
+## What you can ask
+
+| You ask | What happens |
+| --- | --- |
+| *"Is TK1848 on time today? Which gate?"* | `get_flight` returns the live snapshot: phase, gate, terminal, delay, and the best known departure and arrival times. |
+| *"TK1 from Istanbul tomorrow: when does it leave?"* | TK1 flies two legs that day. The assistant passes `origin: "IST"` and gets the right one instead of a guess. |
+| *"Watch PC1001 on Friday and post every change to https://api.example.com/hooks/flights."* | `create_subscription` starts the watch and hands you the signing secret, shown once. |
+| *"Our webhook stopped firing. Why?"* | `get_subscription` and `list_deliveries` show the status and the HTTP code and error of every recent attempt. |
+| *"Add a FlightByte webhook receiver with signature verification to this Express app."* | `search_docs` and `get_doc_page` pull the exact steps from the docs, so the code matches the API rather than a guess. |
 
 ## Tools
 
-| Tool | What it does | API | Hints |
-| --- | --- | --- | --- |
-| `search_docs` | Keyword search over the whole documentation (docs, API reference, guides, glossary); returns titles, URLs and snippets. No key needed. | `llms-full.txt` | read-only |
-| `get_doc_page` | One docs page as Markdown, from a URL or a path like `/docs/webhooks`. No key needed. | `<page>.md` | read-only |
-| `get_flight` | Live status of one flight leg: phase, gates, terminals, baggage belt, scheduled/estimated/actual times, delay, aircraft, codeshares, every leg of the number that day. | `GET /v1/flights/{carrier}/{flightNumber}/{date}` | read-only |
-| `search_flights` | The same lookup as query parameters. | `GET /v1/flights/search` | read-only |
-| `get_flight_timeline` | The airline's change history for a leg, newest first. | `GET /v1/flights/{carrier}/{flightNumber}/{date}/timeline` | read-only |
-| `create_subscription` | Watch a flight and receive a signed webhook for every change. Counts as a watched flight on your plan. Returns the signing secret once. | `POST /v1/subscriptions` | writes |
-| `list_subscriptions` | Your subscriptions, filtered by status, carrier, number or date. | `GET /v1/subscriptions` | read-only |
-| `get_subscription` | One subscription, its status and delivery counters. | `GET /v1/subscriptions/{id}` | read-only |
-| `update_subscription` | Change the webhook URL, event filter, delay threshold, headers or metadata. | `PATCH /v1/subscriptions/{id}` | writes, idempotent |
-| `pause_subscription` | Stop polling and deliveries without losing the subscription. | `POST /v1/subscriptions/{id}/pause` | writes, idempotent |
-| `resume_subscription` | Resume a paused or auto-suspended subscription. | `POST /v1/subscriptions/{id}/resume` | writes, idempotent |
-| `delete_subscription` | Delete a subscription for good. | `DELETE /v1/subscriptions/{id}` | **destructive** |
-| `send_test_event` | Send a signed test webhook to the subscription's URL. | `POST /v1/subscriptions/{id}/test` | writes |
-| `list_deliveries` | Recent delivery attempts with HTTP status and errors. | `GET /v1/subscriptions/{id}/deliveries` | read-only |
-| `list_events` | Recent events with the exact payloads that were sent. | `GET /v1/subscriptions/{id}/events` | read-only |
+**Docs**: no key needed.
 
-Input parameters carry the API's own names (`carrier`, `flightNumber`, `date`, `origin`, `webhookUrl`, `delayThresholdMinutes`, `Idempotency-Key`, …), checked against the [OpenAPI document](https://flightbyte.dev/openapi.json) by the test suite. Results are the API's JSON, as text and as `structuredContent`. Errors come back as tool errors that say what to do next: pass `origin` when a flight number flies more than one leg, wait for `Retry-After` on a `429`, stop on `402 watched_flight_limit`, and so on.
+| Tool | What it does |
+| --- | --- |
+| `search_docs` | Keyword search over the whole documentation: docs, API reference, guides and glossary. Returns titles, links and snippets. |
+| `get_doc_page` | Any docs page as Markdown, from a link or a path like `/docs/webhooks`. |
 
-### Left out on purpose
+**Flights**: read-only.
 
-- **`reveal-secret` and `rotate-secret` are not exposed.** Either would put a webhook signing secret into the model's context, and from there into transcripts and logs. `create_subscription` returns the secret once because the API does, and its result tells the assistant to hand it to you. To see or rotate a secret later, use the [dashboard](https://app.flightbyte.dev) or call the API yourself.
-- Countries and flags (`/v1/countries`, `/v1/flags`) are not exposed in v1.
+| Tool | What it does |
+| --- | --- |
+| `get_flight` | Live status of one flight leg: phase, gates, terminals, baggage belt, scheduled, estimated and actual times, delay, aircraft, codeshares, and every leg the number flies that day.<br><sub>`GET /v1/flights/{carrier}/{flightNumber}/{date}`</sub> |
+| `search_flights` | The same lookup with query parameters.<br><sub>`GET /v1/flights/search`</sub> |
+| `get_flight_timeline` | The airline's own change history for a leg, newest first.<br><sub>`GET /v1/flights/{carrier}/{flightNumber}/{date}/timeline`</sub> |
+
+**Subscriptions**
+
+| Tool | What it does | Access |
+| --- | --- | --- |
+| `create_subscription` | Watch a flight and get a signed webhook for every change. Counts as a watched flight on your plan.<br><sub>`POST /v1/subscriptions`</sub> | writes |
+| `list_subscriptions` | Your subscriptions, filtered by status, carrier, number or date.<br><sub>`GET /v1/subscriptions`</sub> | read-only |
+| `get_subscription` | One subscription with its status and delivery counters.<br><sub>`GET /v1/subscriptions/{id}`</sub> | read-only |
+| `update_subscription` | Change the webhook URL, event filter, delay threshold, headers or metadata.<br><sub>`PATCH /v1/subscriptions/{id}`</sub> | writes |
+| `pause_subscription` | Stop polling and deliveries without losing anything.<br><sub>`POST /v1/subscriptions/{id}/pause`</sub> | writes |
+| `resume_subscription` | Resume a paused or auto-suspended subscription.<br><sub>`POST /v1/subscriptions/{id}/resume`</sub> | writes |
+| `delete_subscription` | Delete a subscription for good.<br><sub>`DELETE /v1/subscriptions/{id}`</sub> | **destructive** |
+| `send_test_event` | Send a signed test webhook to the subscription's URL.<br><sub>`POST /v1/subscriptions/{id}/test`</sub> | writes |
+| `list_deliveries` | Recent delivery attempts with HTTP status and errors.<br><sub>`GET /v1/subscriptions/{id}/deliveries`</sub> | read-only |
+| `list_events` | Recent events with the exact payloads that were sent.<br><sub>`GET /v1/subscriptions/{id}/events`</sub> | read-only |
+
+Parameters carry the API's own names (`carrier`, `flightNumber`, `date`, `origin`, `webhookUrl`, `Idempotency-Key`, …), and the test suite checks every one against the [OpenAPI document](https://flightbyte.dev/openapi.json). Results are the API's JSON, as text and as structured content.
+
+## Built for assistants
+
+- **Your key stays yours.** The local server reads `FLIGHTBYTE_KEY`. The hosted server reads the key from each request's header, uses it for that request only, and never stores or logs it.
+- **Secrets stay out of the chat.** There are no tools to reveal or rotate a webhook signing secret, because either would put it into the model's context and from there into transcripts. `create_subscription` returns the secret once, as the API does, and tells the assistant to hand it to you. Reveal or rotate secrets in the [dashboard](https://app.flightbyte.dev).
+- **Clients know what is safe.** Read-only tools are marked read-only and `delete_subscription` is marked destructive, so clients can ask before running it. `create_subscription` tells the model it creates a billable watched flight and should only run when you ask for one.
+- **Errors say what to do next.** A flight number that flies twice comes back with its legs and "pass `origin`". A `429` comes back with how long to wait. A `402 watched_flight_limit` says to stop, when the allowance resets, and where to upgrade.
+- **Docs fetches stay on flightbyte.dev.** `get_doc_page` refuses every other host.
 
 ## Install
 
-Replace `YOUR_FLIGHTBYTE_KEY` with your key in the snippets below.
+Replace `YOUR_FLIGHTBYTE_KEY` with your key. Every client below can use the hosted server; the local one needs Node.js 20 or later.
 
-### Claude Code
+<details open>
+<summary><b>Claude Code</b></summary>
+
+<br>
 
 Hosted:
 
 ```bash
-claude mcp add --transport http flightbyte https://mcp.flightbyte.dev/mcp --header "Authorization: Bearer YOUR_FLIGHTBYTE_KEY"
+claude mcp add --transport http flightbyte https://mcp.flightbyte.dev/mcp \
+  --header "Authorization: Bearer YOUR_FLIGHTBYTE_KEY"
 ```
 
 Local:
 
 ```bash
-claude mcp add flightbyte --env FLIGHTBYTE_KEY=YOUR_FLIGHTBYTE_KEY -- npx -y @flightbyte/mcp
+claude mcp add flightbyte --env FLIGHTBYTE_KEY=YOUR_FLIGHTBYTE_KEY \
+  -- npx -y @flightbyte/mcp
 ```
 
-Add `--scope user` to make it available in every project. To share it with a team through a committed `.mcp.json`, keep the key in each person's environment:
+Add `--scope user` to have it in every project. To share it with a team through a committed `.mcp.json`, keep the key in each person's environment:
 
 ```json
 {
@@ -73,22 +148,27 @@ Add `--scope user` to make it available in every project. To share it with a tea
 }
 ```
 
-### Cursor
+</details>
 
-Click **Install in Cursor** above (hosted) or [this link for the local server](https://cursor.com/en/install-mcp?name=flightbyte&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBmbGlnaHRieXRlL21jcCJdLCJlbnYiOnsiRkxJR0hUQllURV9LRVkiOiJZT1VSX0ZMSUdIVEJZVEVfS0VZIn19), then replace `YOUR_FLIGHTBYTE_KEY` in the installed entry. Or edit `~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project) yourself:
+<details>
+<summary><b>Cursor</b></summary>
+
+<br>
+
+Click **Add to Cursor** at the top for the hosted server, or [this link for the local one](https://cursor.com/en/install-mcp?name=flightbyte&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBmbGlnaHRieXRlL21jcCJdLCJlbnYiOnsiRkxJR0hUQllURV9LRVkiOiJZT1VSX0ZMSUdIVEJZVEVfS0VZIn19), then replace `YOUR_FLIGHTBYTE_KEY` in the installed entry. Or add it to `~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project):
 
 ```json
 {
   "mcpServers": {
     "flightbyte": {
       "url": "https://mcp.flightbyte.dev/mcp",
-      "headers": { "Authorization": "Bearer ${env:FLIGHTBYTE_KEY}" }
+      "headers": { "Authorization": "Bearer YOUR_FLIGHTBYTE_KEY" }
     }
   }
 }
 ```
 
-The local form:
+Local:
 
 ```json
 {
@@ -102,11 +182,16 @@ The local form:
 }
 ```
 
-`${env:FLIGHTBYTE_KEY}` only works if Cursor was started from a shell that has the variable; otherwise put the key in directly.
+`"Bearer ${env:FLIGHTBYTE_KEY}"` also works, if Cursor was started from a shell that has the variable.
 
-### VS Code
+</details>
 
-Click **Install in VS Code** above; VS Code asks for the key and stores it securely. Or add it to `.vscode/mcp.json`:
+<details>
+<summary><b>VS Code</b></summary>
+
+<br>
+
+Click **Install in VS Code** at the top: VS Code asks for the key and stores it securely. Or add it to `.vscode/mcp.json`:
 
 ```json
 {
@@ -123,15 +208,20 @@ Click **Install in VS Code** above; VS Code asks for the key and stores it secur
 }
 ```
 
-The local form uses `"type": "stdio", "command": "npx", "args": ["-y", "@flightbyte/mcp"], "env": { "FLIGHTBYTE_KEY": "${input:flightbyte_key}" }` in place of `type`, `url` and `headers`. From a terminal:
+Local, from a terminal:
 
 ```bash
 code --add-mcp '{"name":"flightbyte","type":"stdio","command":"npx","args":["-y","@flightbyte/mcp"],"env":{"FLIGHTBYTE_KEY":"YOUR_FLIGHTBYTE_KEY"}}'
 ```
 
-### Claude Desktop
+</details>
 
-Add the local server to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`, Windows: `%APPDATA%\Claude\claude_desktop_config.json`), then quit and reopen Claude:
+<details>
+<summary><b>Claude Desktop</b></summary>
+
+<br>
+
+Add the local server to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`, Windows: `%APPDATA%\Claude\`), then quit and reopen Claude:
 
 ```json
 {
@@ -145,57 +235,66 @@ Add the local server to `claude_desktop_config.json` (macOS: `~/Library/Applicat
 }
 ```
 
-The hosted server can also be added under **Settings → Connectors → Add custom connector** with the URL `https://mcp.flightbyte.dev/mcp`. Sending the key needs the connector's **Request headers** option (`authorization: Bearer YOUR_FLIGHTBYTE_KEY`), which is in beta and not available to every account; without it only the docs tools work, so the local form above is the reliable one.
+The hosted server can also be added under **Settings → Connectors → Add custom connector** with the URL `https://mcp.flightbyte.dev/mcp`. Sending the key needs the connector's **Request headers** option (`authorization: Bearer YOUR_FLIGHTBYTE_KEY`), which is in beta and not on every account; without it only the docs tools work, so the local server is the reliable choice here.
 
-### Any other client
+</details>
 
-- Streamable HTTP: `https://mcp.flightbyte.dev/mcp`, header `Authorization: Bearer YOUR_FLIGHTBYTE_KEY` (or `x-api-key: YOUR_FLIGHTBYTE_KEY`).
-- stdio: command `npx`, arguments `-y @flightbyte/mcp`, environment `FLIGHTBYTE_KEY=YOUR_FLIGHTBYTE_KEY`.
+<details>
+<summary><b>Any other client</b></summary>
 
-Both transports speak MCP 2026-07-28 and the 2025 revisions (2024-11-05 to 2025-11-25): the client's first message picks one.
+<br>
+
+- **Streamable HTTP:** `https://mcp.flightbyte.dev/mcp` with the header `Authorization: Bearer YOUR_FLIGHTBYTE_KEY` (or `x-api-key: YOUR_FLIGHTBYTE_KEY`).
+- **stdio:** command `npx`, arguments `-y @flightbyte/mcp`, environment `FLIGHTBYTE_KEY=YOUR_FLIGHTBYTE_KEY`.
+
+Both speak MCP 2026-07-28 and the 2025 revisions (2024-11-05 to 2025-11-25); the client's first message picks one.
+
+</details>
 
 ## Configuration
 
 | Variable | Used by | Default | Meaning |
 | --- | --- | --- | --- |
-| `FLIGHTBYTE_KEY` | stdio | none | Your API key. Without it the API tools return a message explaining how to set it, and the docs tools still work. The HTTP server ignores it and reads the key from each request instead. |
+| `FLIGHTBYTE_KEY` | local | none | Your API key. Without it the API tools explain how to set one and the docs tools still work. The hosted server ignores it and reads the key from each request. |
 | `FLIGHTBYTE_API_URL` | both | `https://api.flightbyte.dev/v1` | API base URL, e.g. `http://localhost:3000/v1` for a local API. |
 | `FLIGHTBYTE_DOCS_URL` | both | `https://flightbyte.dev` | Docs site that serves `/llms-full.txt` and `<page>.md`. |
 | `PORT` | HTTP | `8080` | Listening port. |
-| `HOST` | HTTP | `127.0.0.1` (`0.0.0.0` in the Docker image) | Listening address. |
-| `RATE_LIMIT_PER_MINUTE` | HTTP | `120` | POSTs to `/mcp` per client IP per minute; `0` disables it. |
-| `TRUST_PROXY` | HTTP | `0` (`1` in the Docker image) | How many reverse proxies' `X-Forwarded-For` entries to trust when working out the client IP. |
-| `ALLOWED_HOSTS` | HTTP | loopback names when `HOST` is loopback, otherwise any | Comma-separated `Host` header values accepted on `/mcp` (DNS rebinding protection). |
+| `HOST` | HTTP | `127.0.0.1` (`0.0.0.0` in Docker) | Listening address. |
+| `RATE_LIMIT_PER_MINUTE` | HTTP | `120` | Requests to `/mcp` per client IP per minute; `0` turns it off. |
+| `TRUST_PROXY` | HTTP | `0` (`1` in Docker) | How many reverse proxies' `X-Forwarded-For` entries to trust when finding the client IP. |
+| `ALLOWED_HOSTS` | HTTP | loopback names on a loopback `HOST`, otherwise any | Comma-separated `Host` values accepted on `/mcp`, against DNS rebinding. |
 
-## The HTTP server
+## Self-hosting
 
-`npm run start:http` (or the Docker image) serves:
+The hosted server is this repository's `Dockerfile`: a stateless Streamable HTTP server with no database and no secrets of its own.
 
-- `POST /mcp`: MCP over Streamable HTTP in stateless mode. Every request gets a fresh server bound to the key in that request's headers; responses are plain JSON, there are no sessions, and `GET`/`DELETE /mcp` answer `405`. Requests carrying the 2026-07-28 per-request envelope are served by the SDK's `createMcpHandler`; 2025-era requests (`initialize`, then plain JSON-RPC) by a JSON-mode Streamable HTTP transport. The request log notes which (`era=modern` or `era=legacy`).
-- `GET /healthz`: `{"status":"ok","version":"…"}`.
+```bash
+docker build -t flightbyte-mcp .
+docker run -p 8080:8080 flightbyte-mcp
+```
 
-Keys are used for the one request and never stored or logged. The docs index is cached in memory for 15 minutes and shared by all requests. Deployment notes for Dokploy are in [DEPLOY.md](DEPLOY.md).
+It serves `POST /mcp` and `GET /healthz`. Each request gets a fresh server bound to the key in its headers; responses are plain JSON with no sessions, so it scales to any number of replicas. Requests in the 2026-07-28 format are served by the SDK's per-request handler, and 2025-era requests by a JSON-mode Streamable HTTP transport. Deployment notes for Dokploy are in [DEPLOY.md](DEPLOY.md).
 
-## Local development
+## Development
 
-Running the server needs Node.js 20 or later; developing it needs Node.js 22.12 or later (for vitest).
+Running the server needs Node.js 20 or later; developing it needs 22.12 or later.
 
 ```bash
 npm install
 npm run build        # TypeScript → dist/
-npm test             # builds, then runs every test against a local mock API and docs site
+npm test             # builds, then runs everything against a local mock of the API and docs
 npm run typecheck
 npm run lint
 ```
 
-The tests never touch the real API or need a key. They cover the request mapping of every tool, the error mapping, docs parsing and ranking, both transports end to end (the built `dist/stdio.js` and `dist/http.js` are spawned and driven by MCP clients on protocol 2025-11-25 and 2026-07-28, including a client built on the v1 SDK, `@modelcontextprotocol/sdk`, which is a dev dependency for that test only), and a drift check: every API tool's parameters must exist, in the same place and with the same required fields and enums, in `spec/openapi.json`, a vendored copy of [the public OpenAPI document](https://flightbyte.dev/openapi.json). When the API changes:
+The tests never touch the real API and need no key. They cover every tool's request mapping, the error mapping, docs parsing and ranking, and both transports end to end: the built `dist/stdio.js` and `dist/http.js` are spawned and driven by MCP clients on protocol 2025-11-25 and 2026-07-28, including one built on the v1 SDK. A drift check fails when a tool's parameter names, locations, required fields or enums stop matching `spec/openapi.json`, a copy of the [public OpenAPI document](https://flightbyte.dev/openapi.json). When the API changes:
 
 ```bash
 npm run sync:openapi
 npm test
 ```
 
-Try the server by hand with the MCP Inspector, or against a local API:
+Try it by hand with the MCP Inspector, or against a local API:
 
 ```bash
 npx @modelcontextprotocol/inspector node dist/stdio.js
@@ -205,42 +304,44 @@ npx @modelcontextprotocol/inspector node dist/stdio.js
 FLIGHTBYTE_API_URL=http://localhost:3000/v1 FLIGHTBYTE_KEY=your-local-key node dist/stdio.js
 ```
 
-```bash
-npm run start:http
-```
-
-```bash
-curl -s http://127.0.0.1:8080/mcp \
-  -H "content-type: application/json" \
-  -H "accept: application/json, text/event-stream" \
-  -H "authorization: Bearer $FLIGHTBYTE_KEY" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_flight","arguments":{"carrier":"TK","flightNumber":"1848","date":"2026-10-18"}}}'
-```
-
-### Layout
+<details>
+<summary><b>Project layout</b></summary>
 
 ```text
 src/
-  stdio.ts            bin entry: stdio transport (serveStdio), key from FLIGHTBYTE_KEY
+  stdio.ts            bin entry: stdio transport, key from FLIGHTBYTE_KEY
   http.ts             HTTP entry: POST /mcp, GET /healthz, env config
-  http-app.ts         request handling, era routing, key extraction, per-IP rate limit
+  http-app.ts         request handling, protocol routing, key extraction, per-IP rate limit
   server.ts           createServer(): registers every tool on an McpServer
   tools/api-tools.ts  the 13 API tools, one definition per OpenAPI operation
   tools/docs-tools.ts search_docs and get_doc_page
   docs.ts             llms-full.txt parsing, ranking, caching, page fetches
   api.ts              fetch wrapper for the REST API
   errors.ts           error envelope → tool error with next steps
-spec/openapi.json     vendored OpenAPI document (npm run sync:openapi)
-server.json           MCP Registry entry (npm package and hosted remote)
+spec/openapi.json     copy of the public OpenAPI document (npm run sync:openapi)
+server.json           MCP Registry entry: the npm package and the hosted remote
 ```
 
-### Releasing
+</details>
 
-1. Bump `version` in `package.json` and in both places in `server.json` (a test fails if they differ).
-2. `npm publish` (runs typecheck, lint and tests first; the package is public under the `@flightbyte` scope).
-3. Publish `server.json` to the [MCP Registry](https://registry.modelcontextprotocol.io) with `mcp-publisher login dns --domain flightbyte.dev …` and `mcp-publisher publish`.
-4. Redeploy the Docker image for `mcp.flightbyte.dev`.
+<details>
+<summary><b>Releasing</b></summary>
+
+1. Bump `version` in `package.json` and in both places in `server.json`; a test fails if they differ.
+2. `npm publish`. It runs typecheck, lint and tests first, and publishes publicly under the `@flightbyte` scope.
+3. Publish `server.json` to the [MCP Registry](https://registry.modelcontextprotocol.io): `mcp-publisher login dns --domain flightbyte.dev …`, then `mcp-publisher publish`.
+4. Redeploy the Docker image behind `mcp.flightbyte.dev`.
+
+</details>
 
 ## License
 
 [MIT](LICENSE)
+
+<br>
+
+<p align="center">
+  <a href="https://flightbyte.dev"><img src="assets/icon.svg" alt="FlightByte" width="36"></a>
+  <br>
+  <sub><b>FlightByte</b> · Flight intelligence, byte by byte · <a href="https://flightbyte.dev">flightbyte.dev</a></sub>
+</p>
