@@ -6,7 +6,7 @@
   "version": "1.0.0",
   "websiteUrl": "https://flightbyte.dev/docs/ai",
   "repository": {
-    "url": "https://github.com/batuhanthedeveloper/flightbyte-mcp",
+    "url": "https://github.com/flightbyte-dev/flightbyte-mcp",
     "source": "github"
   },
   "packages": [

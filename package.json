@@ -8,10 +8,10 @@
   "homepage": "https://flightbyte.dev/docs/ai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/batuhanthedeveloper/flightbyte-mcp.git"
+    "url": "git+https://github.com/flightbyte-dev/flightbyte-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/batuhanthedeveloper/flightbyte-mcp/issues"
+    "url": "https://github.com/flightbyte-dev/flightbyte-mcp/issues"
   },
   "keywords": [
     "mcp",
