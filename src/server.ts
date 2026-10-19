@@ -24,6 +24,8 @@ export interface ServerOptions {
   /** Shared across server instances so the docs are fetched once per TTL, not once per request. */
   docs: DocsStore;
   fetch?: typeof fetch;
+  /** Called when the API answers 401; the HTTP server uses it to spot a revoked OAuth sign-in. */
+  onUnauthorized?: () => void;
 }
 
 export function createServer(options: ServerOptions): McpServer {
@@ -32,7 +34,12 @@ export function createServer(options: ServerOptions): McpServer {
     // The tool list never changes, so clients have nothing to listen for.
     { instructions: INSTRUCTIONS, capabilities: { tools: { listChanged: false } } },
   );
-  const client = new ApiClient({ baseUrl: options.apiUrl, apiKey: options.apiKey, fetch: options.fetch });
+  const client = new ApiClient({
+    baseUrl: options.apiUrl,
+    apiKey: options.apiKey,
+    onUnauthorized: options.onUnauthorized,
+    fetch: options.fetch,
+  });
 
   registerDocsTools(server, options.docs);
 
