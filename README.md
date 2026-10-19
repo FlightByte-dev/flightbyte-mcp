@@ -23,13 +23,15 @@
 </p>
 
 <p align="center">
-  <a href="https://flightbyte.dev/docs/ai"><b>Docs</b></a> ·
+  <a href="https://flightbyte.dev/docs/mcp"><b>Docs</b></a> ·
   <a href="https://app.flightbyte.dev/signup"><b>Get a free key</b></a> ·
   <a href="https://flightbyte.dev/docs/reference"><b>API reference</b></a> ·
   <a href="https://t.me/flightbyte"><b>Support</b></a>
 </p>
 
 <p align="center">
+  <a href="https://claude.ai/directory/flightbyte"><img src="https://img.shields.io/badge/Claude-Add_connector-D97757?style=for-the-badge&logo=claude&logoColor=white" alt="Add to Claude" height="32"></a>
+  &nbsp;
   <a href="https://cursor.com/en/install-mcp?name=flightbyte&config=eyJ1cmwiOiJodHRwczovL21jcC5mbGlnaHRieXRlLmRldi9tY3AiLCJoZWFkZXJzIjp7IkF1dGhvcml6YXRpb24iOiJCZWFyZXIgWU9VUl9GTElHSFRCWVRFX0tFWSJ9fQ%3D%3D"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add to Cursor" height="32"></a>
   &nbsp;
   <a href="https://vscode.dev/redirect/mcp/install?name=flightbyte&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22flightbyte_key%22%2C%22description%22%3A%22FlightByte%20API%20key%22%2C%22password%22%3Atrue%7D%5D&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.flightbyte.dev%2Fmcp%22%2C%22headers%22%3A%7B%22Authorization%22%3A%22Bearer%20%24%7Binput%3Aflightbyte_key%7D%22%7D%7D"><img src="https://img.shields.io/badge/VS_Code-Install_server-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Install in VS Code" height="32"></a>
@@ -57,7 +59,7 @@
    Every other client is under [Install](#install).
 3. Ask: *"Is TK1848 on time today?"*
 
-In Claude (claude.ai, Desktop or mobile) there is nothing to copy: add `https://mcp.flightbyte.dev/mcp` under **Customize → Connectors → Add custom connector**, and the first time Claude needs your account it asks you to sign in to FlightByte and allow it. See [Sign in with OAuth](#sign-in-with-oauth).
+In Claude (claude.ai, Desktop or mobile) there is nothing to copy: FlightByte is in [Claude's connector directory](https://claude.ai/directory/flightbyte). Add it there, and the first time Claude needs your account it asks you to sign in to FlightByte and allow it. See [Sign in with OAuth](#sign-in-with-oauth).
 
 The docs tools work without a key or a sign-in, so an assistant can read the documentation before you have signed up.
 
@@ -108,7 +110,7 @@ Parameters carry the API's own names (`carrier`, `flightNumber`, `date`, `origin
 ## Built for assistants
 
 - **Your key stays yours.** The local server reads `FLIGHTBYTE_KEY`. The hosted server reads the key from each request's header, uses it for that request only, and never stores or logs it. Signed in with OAuth, the app never sees a key at all, and you can revoke it under [Connected apps](https://app.flightbyte.dev/connected-apps).
-- **Secrets stay out of the chat.** There are no tools to reveal or rotate a webhook signing secret, because either would put it into the model's context and from there into transcripts. `create_subscription` returns the secret once, as the API does, and tells the assistant to hand it to you. Reveal or rotate secrets in the [dashboard](https://app.flightbyte.dev).
+- **Secrets stay out of the chat.** There are no tools to reveal or rotate a webhook signing secret, because either would put it into the model's context and from there into transcripts. `create_subscription` returns the secret once, as the API does, and tells the assistant to hand it to you. Reveal or rotate a secret yourself with the API: [reveal](https://flightbyte.dev/docs/reference/subscriptions/reveal-secret), [rotate](https://flightbyte.dev/docs/reference/subscriptions/rotate-secret).
 - **Clients know what is safe.** Read-only tools are marked read-only and `delete_subscription` is marked destructive, so clients can ask before running it. `create_subscription` tells the model it creates a billable watched flight and should only run when you ask for one.
 - **Errors say what to do next.** A flight number that flies twice comes back with its legs and "pass `origin`". A `429` comes back with how long to wait. A `402 watched_flight_limit` says to stop, when the allowance resets, and where to upgrade.
 - **Docs fetches stay on flightbyte.dev.** `get_doc_page` refuses every other host.
@@ -237,7 +239,7 @@ Add the local server to `claude_desktop_config.json` (macOS: `~/Library/Applicat
 }
 ```
 
-Or skip the key: add the hosted server under **Customize → Connectors → Add custom connector** with the URL `https://mcp.flightbyte.dev/mcp` (on Team and Enterprise plans an Owner adds it under **Organization settings → Connectors**). If the dialog asks, pick **Sign in when needed** and **Use Claude's published identity**. The docs tools work right away; the first time Claude calls a tool that needs your account, it shows a **Connect** button, you sign in to FlightByte and allow it, and the call goes through. See [Sign in with OAuth](#sign-in-with-oauth).
+Or skip the key: add FlightByte from [Claude's connector directory](https://claude.ai/directory/flightbyte), or add the hosted server under **Customize → Connectors → Add custom connector** with the URL `https://mcp.flightbyte.dev/mcp` (on Team and Enterprise plans an Owner adds it under **Organization settings → Connectors**). If the dialog asks, pick **Sign in when needed** and **Use Claude's published identity**. The docs tools work right away; the first time Claude calls a tool that needs your account, it shows a **Connect** button, you sign in to FlightByte and allow it, and the call goes through. See [Sign in with OAuth](#sign-in-with-oauth).
 
 </details>
 
