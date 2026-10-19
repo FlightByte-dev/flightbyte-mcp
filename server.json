@@ -35,9 +35,9 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Your FlightByte API key as a bearer token: Bearer <key>. The docs tools work without it.",
+          "description": "Your FlightByte API key as a bearer token: Bearer <key>. Clients that support MCP authorization can sign in with OAuth instead, and the docs tools work without either.",
           "value": "Bearer {flightbyte_key}",
-          "isRequired": true,
+          "isRequired": false,
           "isSecret": true,
           "variables": {
             "flightbyte_key": {

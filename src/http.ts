@@ -2,8 +2,11 @@ import { createServer as createHttpServer } from 'node:http';
 import { loadConfig, VERSION } from './config.js';
 import { DocsStore } from './docs.js';
 import { createHttpApp } from './http-app.js';
+import { loadOAuthOptions } from './oauth.js';
 
 const config = loadConfig();
+// Off unless FLIGHTBYTE_OAUTH_CLIENT_SECRET is set: then API keys only, as before.
+const oauth = loadOAuthOptions();
 const port = intEnv('PORT', 8080);
 const host = process.env.HOST?.trim() || '127.0.0.1';
 const loopback = ['127.0.0.1', 'localhost', '::1'].includes(host);
@@ -21,6 +24,7 @@ const app = createHttpApp({
   rateLimitPerMinute: intEnv('RATE_LIMIT_PER_MINUTE', 120),
   trustProxy: intEnv('TRUST_PROXY', 0),
   allowedHosts,
+  oauth,
 });
 
 const server = createHttpServer((req, res) => void app.handler(req, res));
@@ -28,13 +32,17 @@ server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
 server.requestTimeout = 120_000;
 
-const sweeper = setInterval(() => app.limiter?.sweep(), 60_000);
+const sweeper = setInterval(() => {
+  app.limiter?.sweep();
+  app.exchanger?.sweep();
+}, 60_000);
 sweeper.unref();
 
 server.listen(port, host, () => {
   const address = server.address();
   const bound = typeof address === 'object' && address ? address.port : port;
   console.error(`flightbyte-mcp ${VERSION} listening on http://${host.includes(':') ? `[${host}]` : host}:${bound}/mcp`);
+  console.error(oauth ? `OAuth on: resource ${oauth.resource}, authorization server ${oauth.issuer}` : 'OAuth off: API keys only');
 });
 
 const shutdown = (signal: string) => {

@@ -57,7 +57,9 @@
    Every other client is under [Install](#install).
 3. Ask: *"Is TK1848 on time today?"*
 
-The docs tools work without a key, so an assistant can read the documentation before you have signed up.
+In Claude (claude.ai, Desktop or mobile) there is nothing to copy: add `https://mcp.flightbyte.dev/mcp` under **Customize → Connectors → Add custom connector**, and the first time Claude needs your account it asks you to sign in to FlightByte and allow it. See [Sign in with OAuth](#sign-in-with-oauth).
+
+The docs tools work without a key or a sign-in, so an assistant can read the documentation before you have signed up.
 
 ## What you can ask
 
@@ -105,7 +107,7 @@ Parameters carry the API's own names (`carrier`, `flightNumber`, `date`, `origin
 
 ## Built for assistants
 
-- **Your key stays yours.** The local server reads `FLIGHTBYTE_KEY`. The hosted server reads the key from each request's header, uses it for that request only, and never stores or logs it.
+- **Your key stays yours.** The local server reads `FLIGHTBYTE_KEY`. The hosted server reads the key from each request's header, uses it for that request only, and never stores or logs it. Signed in with OAuth, the app never sees a key at all, and you can revoke it under [Connected apps](https://app.flightbyte.dev/connected-apps).
 - **Secrets stay out of the chat.** There are no tools to reveal or rotate a webhook signing secret, because either would put it into the model's context and from there into transcripts. `create_subscription` returns the secret once, as the API does, and tells the assistant to hand it to you. Reveal or rotate secrets in the [dashboard](https://app.flightbyte.dev).
 - **Clients know what is safe.** Read-only tools are marked read-only and `delete_subscription` is marked destructive, so clients can ask before running it. `create_subscription` tells the model it creates a billable watched flight and should only run when you ask for one.
 - **Errors say what to do next.** A flight number that flies twice comes back with its legs and "pass `origin`". A `429` comes back with how long to wait. A `402 watched_flight_limit` says to stop, when the allowance resets, and where to upgrade.
@@ -235,7 +237,7 @@ Add the local server to `claude_desktop_config.json` (macOS: `~/Library/Applicat
 }
 ```
 
-The hosted server can also be added under **Settings → Connectors → Add custom connector** with the URL `https://mcp.flightbyte.dev/mcp`. Sending the key needs the connector's **Request headers** option (`authorization: Bearer YOUR_FLIGHTBYTE_KEY`), which is in beta and not on every account; without it only the docs tools work, so the local server is the reliable choice here.
+Or skip the key: add the hosted server under **Customize → Connectors → Add custom connector** with the URL `https://mcp.flightbyte.dev/mcp` (on Team and Enterprise plans an Owner adds it under **Organization settings → Connectors**). If the dialog asks, pick **Sign in when needed** and **Use Claude's published identity**. The docs tools work right away; the first time Claude calls a tool that needs your account, it shows a **Connect** button, you sign in to FlightByte and allow it, and the call goes through. See [Sign in with OAuth](#sign-in-with-oauth).
 
 </details>
 
@@ -247,9 +249,19 @@ The hosted server can also be added under **Settings → Connectors → Add cust
 - **Streamable HTTP:** `https://mcp.flightbyte.dev/mcp` with the header `Authorization: Bearer YOUR_FLIGHTBYTE_KEY` (or `x-api-key: YOUR_FLIGHTBYTE_KEY`).
 - **stdio:** command `npx`, arguments `-y @flightbyte/mcp`, environment `FLIGHTBYTE_KEY=YOUR_FLIGHTBYTE_KEY`.
 
-Both speak MCP 2026-07-28 and the 2025 revisions (2024-11-05 to 2025-11-25); the client's first message picks one.
+Both speak MCP 2026-07-28 and the 2025 revisions (2024-11-05 to 2025-11-25); the client's first message picks one. A Streamable HTTP client that supports MCP authorization can sign in with OAuth instead of sending a key.
 
 </details>
+
+## Sign in with OAuth
+
+The hosted server is an OAuth 2.1 protected resource, as the [MCP authorization spec](https://modelcontextprotocol.io/specification/latest/basic/authorization) describes, so clients that take OAuth and no API key (Claude's connectors) can use it with your account.
+
+- **Signed out**, `initialize`, `tools/list`, `search_docs` and `get_doc_page` work. Calling an API tool answers `401` with `WWW-Authenticate: Bearer resource_metadata="https://mcp.flightbyte.dev/.well-known/oauth-protected-resource/mcp"`, which is what makes the client offer to sign in.
+- **The authorization server** is the FlightByte API (`https://api.flightbyte.dev`, metadata at `/.well-known/oauth-authorization-server`). You sign in to the dashboard and allow the app there; it acts as one of your API keys, so that key's plan, quota, logs and watched flights apply. Clients identify themselves with a Client ID Metadata Document (as Claude and Claude Code do) or register dynamically; PKCE is required, and refresh tokens rotate.
+- **Scopes:** `flights:read` (the flight tools), `subscriptions:read` (listing watches, deliveries and events) and `subscriptions:write` (creating, changing and deleting watches, and test events). A tool outside the granted scopes answers `403 insufficient_scope`.
+- **Tokens are never passed through.** The MCP spec forbids sending a client's token on to another API, so this server trades it at the authorization server ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) for a short-lived token for the API, with a client secret of its own, and keeps the trade in memory until it expires. Revoking the app under Connected apps, or revoking the key it acts as, stops it on its next request.
+- **API keys work exactly as before**, in either header. OAuth is off unless `FLIGHTBYTE_OAUTH_CLIENT_SECRET` is set.
 
 ## Configuration
 
@@ -263,10 +275,15 @@ Both speak MCP 2026-07-28 and the 2025 revisions (2024-11-05 to 2025-11-25); the
 | `RATE_LIMIT_PER_MINUTE` | HTTP | `120` | Requests to `/mcp` per client IP per minute; `0` turns it off. |
 | `TRUST_PROXY` | HTTP | `0` (`1` in Docker) | How many reverse proxies' `X-Forwarded-For` entries to trust when finding the client IP. |
 | `ALLOWED_HOSTS` | HTTP | loopback names on a loopback `HOST`, otherwise any | Comma-separated `Host` values accepted on `/mcp`, against DNS rebinding. |
+| `FLIGHTBYTE_OAUTH_CLIENT_SECRET` | HTTP | none | Turns OAuth on: this server's secret at the authorization server, used only to trade tokens. Must match the API's `OAUTH_MCP_CLIENT_SECRET`. |
+| `MCP_PUBLIC_URL` | HTTP | `https://mcp.flightbyte.dev` | This server's public origin; the OAuth resource is `<MCP_PUBLIC_URL>/mcp` and must equal the API's `OAUTH_MCP_RESOURCE`. |
+| `FLIGHTBYTE_OAUTH_ISSUER` | HTTP | `https://api.flightbyte.dev` | The authorization server named in the protected resource metadata. |
+| `FLIGHTBYTE_OAUTH_TOKEN_URL` | HTTP | `<issuer>/oauth/token` | Where tokens are traded, e.g. the API's internal address. |
+| `FLIGHTBYTE_OAUTH_CLIENT_ID` | HTTP | `flightbyte-mcp` | This server's client id at the authorization server. |
 
 ## Self-hosting
 
-The hosted server is this repository's `Dockerfile`: a stateless Streamable HTTP server with no database and no secrets of its own.
+The hosted server is this repository's `Dockerfile`: a stateless Streamable HTTP server with no database. Its one secret is the OAuth client secret, and only when OAuth is on.
 
 ```bash
 docker build -t flightbyte-mcp .
@@ -311,7 +328,8 @@ FLIGHTBYTE_API_URL=http://localhost:3000/v1 FLIGHTBYTE_KEY=your-local-key node d
 src/
   stdio.ts            bin entry: stdio transport, key from FLIGHTBYTE_KEY
   http.ts             HTTP entry: POST /mcp, GET /healthz, env config
-  http-app.ts         request handling, protocol routing, key extraction, per-IP rate limit
+  http-app.ts         request handling, protocol routing, key extraction, the OAuth gate, per-IP rate limit
+  oauth.ts            protected resource metadata, WWW-Authenticate challenges, the token trade
   server.ts           createServer(): registers every tool on an McpServer
   tools/api-tools.ts  the 13 API tools, one definition per OpenAPI operation
   tools/docs-tools.ts search_docs and get_doc_page

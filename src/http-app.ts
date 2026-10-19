@@ -5,7 +5,19 @@ import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { createMcpHandler, isLegacyRequest, WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server';
 import { VERSION } from './config.js';
 import type { DocsStore } from './docs.js';
+import {
+  bearerChallenge,
+  calledTools,
+  isAccessToken,
+  OAUTH_SCOPES,
+  protectedResourceMetadata,
+  resourceMetadataPaths,
+  scopeSatisfies,
+  TokenExchanger,
+  type OAuthOptions,
+} from './oauth.js';
 import { createServer } from './server.js';
+import { API_TOOLS } from './tools/api-tools.js';
 
 export interface HttpAppOptions {
   apiUrl: string;
@@ -17,6 +29,8 @@ export interface HttpAppOptions {
   /** Host header names accepted on /mcp (DNS rebinding protection). Empty accepts any host. */
   allowedHosts: string[];
   maxBodyBytes?: number;
+  /** Sign-in for clients that take OAuth only (Claude's connectors). Unset: API keys only, as before. */
+  oauth?: OAuthOptions | null;
   fetch?: typeof fetch;
   log?: (line: string) => void;
   now?: () => number;
@@ -27,7 +41,7 @@ const CORS_HEADERS = {
   'access-control-allow-methods': 'POST, OPTIONS',
   'access-control-allow-headers':
     'authorization, x-api-key, content-type, accept, mcp-protocol-version, mcp-method, mcp-name, mcp-session-id, last-event-id',
-  'access-control-expose-headers': 'mcp-session-id, retry-after',
+  'access-control-expose-headers': 'mcp-session-id, retry-after, www-authenticate',
   'access-control-max-age': '86400',
 };
 
@@ -65,6 +79,13 @@ export function extractApiKey(headers: Headers): string | undefined {
   return headers.get('x-api-key')?.trim() || undefined;
 }
 
+/** The OAuth scope each API tool needs; docs tools need none. */
+const TOOL_SCOPES = new Map(API_TOOLS.map((def) => [def.name, def.scope]));
+
+function scopesFor(tools: string[]): string[] {
+  return [...new Set(tools.flatMap((name) => TOOL_SCOPES.get(name) ?? []))];
+}
+
 export function clientIp(req: IncomingMessage, trustProxy: number): string {
   if (trustProxy > 0) {
     const forwarded = first(req.headers['x-forwarded-for'])
@@ -82,18 +103,44 @@ export function createHttpApp(options: HttpAppOptions) {
   const now = options.now ?? Date.now;
   const limiter = options.rateLimitPerMinute > 0 ? new RateLimiter(options.rateLimitPerMinute, 60_000, now) : undefined;
   const allowedHosts = new Set(options.allowedHosts.map((h) => h.toLowerCase()));
-  const serverFor = (headers: Headers) =>
-    createServer({ apiUrl: options.apiUrl, apiKey: extractApiKey(headers), docs: options.docs, fetch: options.fetch });
+  const oauth = options.oauth ?? null;
+  const exchanger = oauth ? new TokenExchanger({ ...oauth, fetch: oauth.fetch ?? options.fetch, now }) : undefined;
+  const metadataPaths = new Set(oauth ? resourceMetadataPaths(oauth.resource) : []);
+
+  /** What the API is called with for one request: the caller's API key, or the token traded for their OAuth sign-in. */
+  interface Caller {
+    apiKey?: string;
+    /** The client's own access token, when it signed in with OAuth. */
+    subject?: string;
+    /** The API refused the traded token during this request: access was revoked since the trade. */
+    rejected?: boolean;
+  }
+  const serverFor = (caller: Caller) =>
+    createServer({
+      apiUrl: options.apiUrl,
+      apiKey: caller.apiKey,
+      docs: options.docs,
+      fetch: options.fetch,
+      // Revoked since the trade: forget it, and answer this request with a 401 (see below).
+      onUnauthorized:
+        caller.subject !== undefined
+          ? () => {
+              caller.rejected = true;
+              exchanger?.forget(caller.subject!);
+            }
+          : undefined,
+    });
 
   // 2026-07-28 requests: the SDK entry builds a fresh server per request. Tools send nothing before their result, so it answers plain JSON.
-  const modern = createMcpHandler(({ requestInfo }) => serverFor(requestInfo?.headers ?? new Headers()), {
+  // The caller reaches the factory through authInfo, which the SDK passes through untouched.
+  const modern = createMcpHandler(({ authInfo }) => serverFor((authInfo?.extra?.caller as Caller | undefined) ?? {}), {
     legacy: 'reject',
     onerror: (err) => log(`mcp error: ${err.message}`),
   });
 
   // 2025-era requests (protocol 2024-11-05 to 2025-11-25): stateless Streamable HTTP with JSON responses, a fresh server per request.
-  const serveLegacy = async (request: Request, body: unknown, res: ServerResponse): Promise<Response> => {
-    const server = serverFor(request.headers);
+  const serveLegacy = async (request: Request, body: unknown, res: ServerResponse, caller: Caller): Promise<Response> => {
+    const server = serverFor(caller);
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     res.on('close', () => {
       void transport.close();
@@ -122,9 +169,23 @@ export function createHttpApp(options: HttpAppOptions) {
           version: VERSION,
           mcp: '/mcp',
           transport: 'streamable-http',
-          auth: 'Authorization: Bearer <FlightByte API key>',
+          auth: oauth
+            ? 'Authorization: Bearer <FlightByte API key>, or OAuth (see /.well-known/oauth-protected-resource)'
+            : 'Authorization: Bearer <FlightByte API key>',
           docs: 'https://flightbyte.dev/docs/ai',
         });
+      }
+      if (oauth && metadataPaths.has(url.pathname)) {
+        // RFC 9728 protected resource metadata: where Claude learns which server signs people in.
+        res.setHeader('access-control-allow-origin', '*');
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, { 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '86400' }).end();
+          return;
+        }
+        if (req.method === 'GET' || req.method === 'HEAD') {
+          res.setHeader('cache-control', 'public, max-age=300');
+          return sendJson(res, 200, protectedResourceMetadata(oauth));
+        }
       }
       if (url.pathname !== '/mcp') return sendJson(res, 404, { error: 'Not found. The MCP endpoint is POST /mcp.' });
 
@@ -172,9 +233,66 @@ export function createHttpApp(options: HttpAppOptions) {
         if (!res.writableFinished) abort.abort();
       });
       const request = toWebRequest(req, url, raw, abort.signal);
+      const credential = extractApiKey(request.headers);
+      const caller: Caller = { apiKey: credential };
+
+      if (oauth && exchanger) {
+        // Before the SDK runs: only an HTTP 401 makes Claude sign in, and a tool result is always a 200.
+        const needed = scopesFor(calledTools(body));
+        if (credential && isAccessToken(credential)) {
+          const traded = await exchanger.trade(credential);
+          if (traded.kind === 'invalid') {
+            note += ' auth=oauth-invalid';
+            return sendChallenge(res, 401, bearerChallenge(oauth, { error: 'invalid_token', description: 'The access token is invalid, expired or revoked.' }), {
+              error: 'invalid_token',
+              error_description: 'The access token is invalid, expired or revoked. Refresh it or sign in again.',
+            });
+          }
+          if (traded.kind === 'unavailable') {
+            log(`token exchange failed: ${traded.reason}`);
+            return sendRpcError(res, 503, -32000, 'Sign-in is temporarily unavailable. Try again in a moment.');
+          }
+          const missing = needed.filter((scope) => !scopeSatisfies(traded.scopes, scope));
+          if (missing.length > 0) {
+            note += ' auth=oauth-scope';
+            // Everything still needed, not just what is missing: clients do not reliably keep earlier scopes.
+            const scope = OAUTH_SCOPES.filter((s) => traded.scopes.includes(s) || needed.includes(s));
+            return sendChallenge(res, 403, bearerChallenge(oauth, { error: 'insufficient_scope', scope }), {
+              error: 'insufficient_scope',
+              error_description: `This connection was not granted ${missing.join(', ')}.`,
+            });
+          }
+          caller.apiKey = traded.token;
+          caller.subject = credential;
+        } else if (!credential && needed.length > 0) {
+          // Lazy authentication: tools/list and the docs tools work signed out; an API tool asks to sign in.
+          note += ' auth=challenge';
+          return sendChallenge(res, 401, bearerChallenge(oauth, { scope: OAUTH_SCOPES }), {
+            error: 'invalid_token',
+            error_description: 'Sign in to FlightByte to use this tool.',
+          });
+        }
+      }
+
       const legacy = await isLegacyRequest(request, body);
-      note += `${extractApiKey(request.headers) ? ' key=yes' : ' key=no'} era=${legacy ? 'legacy' : 'modern'}`;
-      await sendResponse(res, legacy ? await serveLegacy(request, body, res) : await modern.fetch(request, { parsedBody: body }));
+      const auth = caller.subject !== undefined ? 'oauth' : credential ? 'yes' : 'no';
+      note += ` key=${auth} era=${legacy ? 'legacy' : 'modern'}`;
+      const authInfo = { token: caller.apiKey ?? '', clientId: 'flightbyte-mcp', scopes: [], extra: { caller } };
+      let response = legacy ? await serveLegacy(request, body, res, caller) : await modern.fetch(request, { parsedBody: body, authInfo });
+      if (oauth && caller.subject !== undefined) {
+        // Plain JSON, so nothing has reached the client yet: if the API refused the token mid-request,
+        // the client gets the 401 the spec asks for (and refreshes or signs in again), not a tool error.
+        const buffered = await response.arrayBuffer();
+        if (caller.rejected) {
+          note += ' auth=oauth-revoked';
+          return sendChallenge(res, 401, bearerChallenge(oauth, { error: 'invalid_token', description: 'The access token was revoked.' }), {
+            error: 'invalid_token',
+            error_description: 'The access token was revoked. Refresh it or sign in again.',
+          });
+        }
+        response = new Response(buffered, { status: response.status, headers: response.headers });
+      }
+      await sendResponse(res, response);
     } catch (err) {
       log(`error handling ${req.method} ${url.pathname}: ${err instanceof Error ? err.message : String(err)}`);
       if (!res.headersSent) sendRpcError(res, 500, -32603, 'Internal server error.');
@@ -182,7 +300,7 @@ export function createHttpApp(options: HttpAppOptions) {
     }
   };
 
-  return { handler, limiter, close: () => modern.close() };
+  return { handler, limiter, exchanger, close: () => modern.close() };
 }
 
 /** Hop-by-hop headers describe this connection, not the request; a web Request must not carry them. */
@@ -246,6 +364,12 @@ function describeRpc(body: unknown): string {
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+}
+
+/** A 401 or 403 with the WWW-Authenticate challenge that starts (or widens) an OAuth sign-in. */
+function sendChallenge(res: ServerResponse, status: 401 | 403, challenge: string, body: Record<string, string>): void {
+  res.setHeader('www-authenticate', challenge);
+  sendJson(res, status, body);
 }
 
 function sendRpcError(res: ServerResponse, status: number, code: number, message: string): void {

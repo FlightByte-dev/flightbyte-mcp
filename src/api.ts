@@ -19,6 +19,8 @@ export type ApiResult =
 export interface ApiClientOptions {
   baseUrl: string;
   apiKey?: string;
+  /** Called when the API answers 401, e.g. so a traded token is not reused. */
+  onUnauthorized?: () => void;
   timeoutMs?: number;
   fetch?: typeof fetch;
 }
@@ -28,6 +30,7 @@ export class ApiClient {
   readonly baseUrl: string;
   readonly hasKey: boolean;
   readonly #apiKey: string | undefined;
+  readonly #onUnauthorized: (() => void) | undefined;
   readonly #timeoutMs: number;
   readonly #fetch: typeof fetch;
 
@@ -35,6 +38,7 @@ export class ApiClient {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
     this.#apiKey = options.apiKey?.trim() || undefined;
     this.hasKey = this.#apiKey !== undefined;
+    this.#onUnauthorized = options.onUnauthorized;
     this.#timeoutMs = options.timeoutMs ?? 30_000;
     this.#fetch = options.fetch ?? fetch;
   }
@@ -82,6 +86,7 @@ export class ApiClient {
     const text = await res.text().catch(() => '');
     const data = parseJson(text);
     if (res.ok) return { kind: 'ok', status: res.status, data, headers: res.headers };
+    if (res.status === 401) this.#onUnauthorized?.();
     return { kind: 'http_error', status: res.status, body: data, text, headers: res.headers };
   }
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/server';
 import type { ApiClient, ApiRequest, HttpMethod } from '../api.js';
 import { apiErrorResult, missingKeyError } from '../errors.js';
+import type { OAuthScope } from '../oauth.js';
 
 /** The 23 change types a subscription can filter on (CreateSubscriptionDto.events in the OpenAPI document). */
 export const CHANGE_TYPES = [
@@ -50,6 +51,8 @@ export interface ApiToolDef {
   description: string;
   /** What a 404 from this endpoint is about. */
   resource: 'flight' | 'subscription';
+  /** The OAuth scope a signed-in caller needs for this tool; API keys carry every scope. */
+  scope: OAuthScope;
   annotations: ToolAnnotations;
   /** Input parameters, keyed by their exact OpenAPI name. */
   params: Record<string, ParamDef>;
@@ -171,6 +174,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/flights/{carrier}/{flightNumber}/{date}',
     title: 'Get a flight',
     resource: 'flight',
+    scope: 'flights:read',
     description:
       'Look up the live status of one flight leg by airline code, flight number and local departure date, e.g. TK1848 on 2026-10-18 → carrier "TK", flightNumber "1848", date "2026-10-18". ' +
       `${SNAPSHOT_SUMMARY} ` +
@@ -192,6 +196,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/flights/search',
     title: 'Search flights',
     resource: 'flight',
+    scope: 'flights:read',
     description:
       'The same lookup as get_flight (same parameters, same snapshot), sent as query parameters to /v1/flights/search. Use either one, not both. ' +
       `${SNAPSHOT_SUMMARY} ` +
@@ -214,6 +219,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/flights/{carrier}/{flightNumber}/{date}/timeline',
     title: 'Flight timeline',
     resource: 'flight',
+    scope: 'flights:read',
     description:
       "The airline's own change history for one flight leg, newest first, as `{flightKey, count, data}`; each entry has `occurredAt`, `title`, `source` and `events` in the airline's words " +
       '(e.g. "Actual Gate Arrival changed to 13:35"). Use it for "what changed" or "why is it late" questions. get_flight already contains the same timeline, so call this only when the history alone is needed.',
@@ -227,6 +233,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions',
     title: 'Create a subscription',
     resource: 'flight',
+    scope: 'subscriptions:write',
     description:
       'Watch a flight: FlightByte polls it on an adaptive schedule and POSTs a signed webhook to `webhookUrl` for every change (status, gates, terminals, times, delays, departure, arrival, baggage carousel, cancellation, diversion, aircraft, route, codeshares) until the flight is over. ' +
       "Each new subscription counts as a watched flight on the user's plan (Free: 3 per month) and starts outbound requests to the URL, so only call this when the user asked to watch or be notified about a specific flight and gave the webhook URL. " +
@@ -290,6 +297,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions',
     title: 'List subscriptions',
     resource: 'subscription',
+    scope: 'subscriptions:read',
     description:
       'List the subscriptions owned by this API key, newest first, as `{total, data}`. All filters are optional; page with `limit` and `offset`. ' +
       'Secrets are masked (`secretHint`). Use it to find a subscription id before get, update, pause, resume, delete or log calls.',
@@ -318,6 +326,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}',
     title: 'Get a subscription',
     resource: 'subscription',
+    scope: 'subscriptions:read',
     description:
       'Fetch one subscription: `status` (active, pending, paused, completed, suspended) and `statusReason`, `flightKey`, `flightResolved`, webhook URL, event filter, delay threshold, ' +
       '`deliveredCount`/`failedCount`, and the last poll, change and delivery times. The secret is masked.',
@@ -331,6 +340,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}',
     title: 'Update a subscription',
     resource: 'subscription',
+    scope: 'subscriptions:write',
     description:
       "Change a subscription's `webhookUrl`, `events` filter, `delayThresholdMinutes`, `headers` or `metadata`. Send only the fields to change; `headers` and `metadata` replace the stored maps. " +
       'The flight cannot be changed: create a new subscription for a different flight.',
@@ -351,6 +361,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}/pause',
     title: 'Pause a subscription',
     resource: 'subscription',
+    scope: 'subscriptions:write',
     description:
       'Stop polling and webhook deliveries for a subscription without deleting it. Nothing is lost; resume_subscription continues it. Returns the updated subscription.',
     annotations: { title: 'Pause a subscription', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -363,6 +374,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}/resume',
     title: 'Resume a subscription',
     resource: 'subscription',
+    scope: 'subscriptions:write',
     description:
       'Resume a paused subscription, or one that was suspended after 20 consecutive failed deliveries (fix the receiver first; send_test_event checks it). ' +
       'A completed subscription cannot be resumed: create a new one. Returns the updated subscription.',
@@ -376,6 +388,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}',
     title: 'Delete a subscription',
     resource: 'subscription',
+    scope: 'subscriptions:write',
     description:
       'Permanently delete a subscription: its polling and webhook deliveries stop and it cannot be restored. Confirm with the user first, and prefer pause_subscription if they may want it back. ' +
       "Events and deliveries already recorded stay on FlightByte's side for 30 days.",
@@ -391,6 +404,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}/test',
     title: 'Send a test event',
     resource: 'subscription',
+    scope: 'subscriptions:write',
     description:
       "Send a signed `subscription.test` webhook through the real delivery pipeline to the subscription's webhookUrl, signed with its real secret, and return the `eventId`. " +
       'Use it to prove a receiver and its signature check work before the first real change, then call list_deliveries to see how the delivery went.',
@@ -404,6 +418,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}/deliveries',
     title: 'List deliveries',
     resource: 'subscription',
+    scope: 'subscriptions:read',
     description:
       'Recent webhook delivery attempts for a subscription, newest first: `eventId`, `attempt`, `status`, `httpStatus`, `error`, `durationMs`, `at` and `changeTypes`. ' +
       'Use it to debug a receiver that is not getting webhooks or is answering with errors. Records are kept for 30 days.',
@@ -420,6 +435,7 @@ export const API_TOOLS: ApiToolDef[] = [
     path: '/subscriptions/{id}/events',
     title: 'List sent events',
     resource: 'subscription',
+    scope: 'subscriptions:read',
     description:
       'Recent events generated for a subscription, newest first, with the exact webhook payloads that were sent (the list of changes and the flight snapshot at the time). ' +
       'Use it to see what changed and when, or to replay a payload into a local receiver.',
