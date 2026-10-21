@@ -16,6 +16,7 @@ export interface ErrorEnvelope {
   limit?: number;
   used?: number;
   resetsAt?: string;
+  capCents?: number;
 }
 
 interface Leg {
@@ -103,6 +104,15 @@ function guidance(status: number, env: ErrorEnvelope, headers: Headers, ctx: Err
         return (
           `The plan's monthly cap on watched flights is reached${usage}, so no new subscription can be created.${reset} ` +
           `The existing subscriptions keep running. Do not retry; tell the user they can wait for the reset or upgrade at ${PLAN_URL}.`
+        );
+      }
+      if (env.code === 'overage_cap_reached') {
+        const cap = env.capCents !== undefined ? ` ($${(env.capCents / 100).toFixed(2)} a month)` : '';
+        const usage = env.used !== undefined && env.limit !== undefined ? ` (${env.used}/${env.limit} this month)` : '';
+        const reset = env.resetsAt ? ` The count resets at ${env.resetsAt}.` : '';
+        return (
+          `The cap this account set on extra watched flights${cap} is reached${usage}, so no new subscription was created and nothing was billed.${reset} ` +
+          `The existing subscriptions keep running. Do not retry; tell the user they can raise or remove the cap at ${PLAN_URL}, or wait for the reset.`
         );
       }
       return `The plan does not allow this request. Do not retry; tell the user to check their plan at ${PLAN_URL}.`;
