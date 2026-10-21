@@ -85,6 +85,28 @@ describe('API error envelope → isError result', () => {
     expect(out).toContain('https://app.flightbyte.dev/plan');
   });
 
+  it('402 overage_cap_reached: the cap, usage, nothing billed, raise or remove it on the Plan page', async () => {
+    mock.on('POST', '/v1/subscriptions', {
+      status: 402,
+      body: envelope(402, 'PaymentRequired', 'This account caps extra flights at $20.00 a month.', {
+        code: 'overage_cap_reached',
+        limit: 350,
+        used: 350,
+        resetsAt: '2026-11-01T00:00:00.000Z',
+        capCents: 2000,
+      }),
+    });
+    const out = text(await mcp.call('create_subscription', newSubscription));
+    expect(out).toContain('(code: overage_cap_reached)');
+    expect(out).toContain('($20.00 a month)');
+    expect(out).toContain('(350/350 this month)');
+    expect(out).toContain('nothing was billed');
+    expect(out).toContain('resets at 2026-11-01T00:00:00.000Z');
+    expect(out).toContain('existing subscriptions keep running');
+    expect(out).toContain('raise or remove the cap at https://app.flightbyte.dev/plan');
+    expect(out).not.toContain('upgrade');
+  });
+
   it('404 on a subscription: look the id up with list_subscriptions', async () => {
     mock.on('GET', '/v1/subscriptions/sub_nope', { status: 404, body: envelope(404, 'NotFoundException', 'Subscription sub_nope not found.') });
     const out = text(await mcp.call('get_subscription', { id: 'sub_nope' }));
