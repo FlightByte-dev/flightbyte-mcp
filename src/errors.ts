@@ -129,7 +129,7 @@ function guidance(status: number, env: ErrorEnvelope, headers: Headers, ctx: Err
       return (
         'No such flight, or no leg matching the selector. If you passed origin, destination or flightId, the message names the legs that exist: retry with one of them. ' +
         'Otherwise check carrier, flightNumber and date (the local departure date at the origin, YYYY-MM-DD). ' +
-        'Live records cover a few days back to about two days ahead; a subscription can still be created up to seven days ahead and waits as `pending`.'
+        'Live records cover a few days back to about two days ahead; a subscription can still be created up to 90 days ahead and waits as `pending`.'
       );
     case 409:
       return (
