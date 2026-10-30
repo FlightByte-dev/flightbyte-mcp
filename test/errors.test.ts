@@ -122,7 +122,7 @@ describe('API error envelope → isError result', () => {
     const out = text(await mcp.call('get_flight', { ...flight, origin: 'LHR' }));
     expect(out).toContain('Available: SAW-AMS, ISL-JFK');
     expect(out).toContain('local departure date at the origin');
-    expect(out).toContain('seven days ahead');
+    expect(out).toContain('90 days ahead');
   });
 
   it('409: find the existing subscription instead of creating another', async () => {

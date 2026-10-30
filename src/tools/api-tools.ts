@@ -237,7 +237,7 @@ export const API_TOOLS: ApiToolDef[] = [
     description:
       'Watch a flight: FlightByte polls it on an adaptive schedule and POSTs a signed webhook to `webhookUrl` for every change (status, gates, terminals, times, delays, departure, arrival, baggage carousel, cancellation, diversion, aircraft, route, codeshares) until the flight is over. ' +
       "Each new subscription counts as a watched flight on the user's plan (Free: 3 per month) and starts outbound requests to the URL, so only call this when the user asked to watch or be notified about a specific flight and gave the webhook URL. " +
-      'If the flight number operates more than one leg that day the call is refused with the list of legs: pass `origin`. Flights up to seven days ahead are accepted and wait as `pending` until published. ' +
+      'If the flight number operates more than one leg that day the call is refused with the list of legs: pass `origin`. Flights up to 90 days ahead are accepted and wait as `pending` until published. ' +
       'The response includes the signing secret in full; this is the only time it is shown, so relay it to the user to store for webhook signature verification. Pass `Idempotency-Key` to make a retry return the same subscription.',
     annotations: { title: 'Create a subscription', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     params: {
