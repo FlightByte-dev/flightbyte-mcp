@@ -78,7 +78,7 @@ describe('API error envelope → isError result', () => {
     });
     const out = text(await mcp.call('create_subscription', newSubscription));
     expect(out).toContain('(code: watched_flight_limit)');
-    expect(out).toContain('(3/3 this month)');
+    expect(out).toContain('(3/3 this period)');
     expect(out).toContain('resets at 2026-11-01T00:00:00.000Z');
     expect(out).toContain('existing subscriptions keep running');
     expect(out).toContain('Do not retry');
@@ -98,8 +98,8 @@ describe('API error envelope → isError result', () => {
     });
     const out = text(await mcp.call('create_subscription', newSubscription));
     expect(out).toContain('(code: overage_cap_reached)');
-    expect(out).toContain('($20.00 a month)');
-    expect(out).toContain('(350/350 this month)');
+    expect(out).toContain('($20.00 a period)');
+    expect(out).toContain('(350/350 this period)');
     expect(out).toContain('nothing was billed');
     expect(out).toContain('resets at 2026-11-01T00:00:00.000Z');
     expect(out).toContain('existing subscriptions keep running');
