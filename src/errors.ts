@@ -99,16 +99,16 @@ function guidance(status: number, env: ErrorEnvelope, headers: Headers, ctx: Err
       );
     case 402: {
       if (env.code === 'watched_flight_limit') {
-        const usage = env.used !== undefined && env.limit !== undefined ? ` (${env.used}/${env.limit} this month)` : '';
+        const usage = env.used !== undefined && env.limit !== undefined ? ` (${env.used}/${env.limit} this period)` : '';
         const reset = env.resetsAt ? ` The allowance resets at ${env.resetsAt}.` : '';
         return (
-          `The plan's monthly cap on watched flights is reached${usage}, so no new subscription can be created.${reset} ` +
+          `The plan's cap on watched flights is reached${usage}, so no new subscription can be created.${reset} ` +
           `The existing subscriptions keep running. Do not retry; tell the user they can wait for the reset or upgrade at ${PLAN_URL}.`
         );
       }
       if (env.code === 'overage_cap_reached') {
-        const cap = env.capCents !== undefined ? ` ($${(env.capCents / 100).toFixed(2)} a month)` : '';
-        const usage = env.used !== undefined && env.limit !== undefined ? ` (${env.used}/${env.limit} this month)` : '';
+        const cap = env.capCents !== undefined ? ` ($${(env.capCents / 100).toFixed(2)} a period)` : '';
+        const usage = env.used !== undefined && env.limit !== undefined ? ` (${env.used}/${env.limit} this period)` : '';
         const reset = env.resetsAt ? ` The count resets at ${env.resetsAt}.` : '';
         return (
           `The cap this account set on extra watched flights${cap} is reached${usage}, so no new subscription was created and nothing was billed.${reset} ` +
