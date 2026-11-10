@@ -107,6 +107,33 @@ describe('API error envelope → isError result', () => {
     expect(out).not.toContain('upgrade');
   });
 
+  it('402 credits_exhausted: credits used or expired, nothing spent, buy a pack on the Plan page', async () => {
+    mock.on('POST', '/v1/subscriptions', {
+      status: 402,
+      body: envelope(402, 'PaymentRequired', "This account's Free flights for the period and its prepaid credits are used.", {
+        code: 'credits_exhausted',
+        balance: 0,
+        expiresAt: '2099-11-10T09:00:00.000Z',
+      }),
+    });
+    const used = text(await mcp.call('create_subscription', newSubscription));
+    expect(used).toContain('(code: credits_exhausted)');
+    expect(used).toContain('prepaid credits are used up');
+    expect(used).toContain('no credit was spent');
+    expect(used).toContain('existing subscriptions keep running');
+    expect(used).toContain('buy a credit pack at https://app.flightbyte.dev/plan');
+
+    mock.on('POST', '/v1/subscriptions', {
+      status: 402,
+      body: envelope(402, 'PaymentRequired', "This account's prepaid credits expired.", {
+        code: 'credits_exhausted',
+        balance: 0,
+        expiresAt: '2026-01-05T09:00:00.000Z',
+      }),
+    });
+    expect(text(await mcp.call('create_subscription', newSubscription))).toContain('expired on 2026-01-05');
+  });
+
   it('404 on a subscription: look the id up with list_subscriptions', async () => {
     mock.on('GET', '/v1/subscriptions/sub_nope', { status: 404, body: envelope(404, 'NotFoundException', 'Subscription sub_nope not found.') });
     const out = text(await mcp.call('get_subscription', { id: 'sub_nope' }));

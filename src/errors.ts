@@ -17,6 +17,10 @@ export interface ErrorEnvelope {
   used?: number;
   resetsAt?: string;
   capCents?: number;
+  /** Prepaid credits left, with `credits_exhausted`. */
+  balance?: number;
+  /** When the credits expire, or expired, with `credits_exhausted`. */
+  expiresAt?: string | null;
 }
 
 interface Leg {
@@ -103,7 +107,17 @@ function guidance(status: number, env: ErrorEnvelope, headers: Headers, ctx: Err
         const reset = env.resetsAt ? ` The allowance resets at ${env.resetsAt}.` : '';
         return (
           `The plan's cap on watched flights is reached${usage}, so no new subscription can be created.${reset} ` +
-          `The existing subscriptions keep running. Do not retry; tell the user they can wait for the reset or upgrade at ${PLAN_URL}.`
+          `The existing subscriptions keep running. Do not retry; tell the user they can wait for the reset, upgrade, or buy prepaid credits with no monthly fee at ${PLAN_URL}.`
+        );
+      }
+      if (env.code === 'credits_exhausted') {
+        const expired = env.expiresAt !== undefined && env.expiresAt !== null && Date.parse(env.expiresAt) <= Date.now();
+        const why = expired
+          ? `the account's prepaid credits expired on ${env.expiresAt!.slice(0, 10)}, twelve months after its last top-up`
+          : "the account's prepaid credits are used up";
+        return (
+          `This period's Free flights are used and ${why}, so no new subscription was created and no credit was spent. ` +
+          `The existing subscriptions keep running. Do not retry; tell the user they can buy a credit pack at ${PLAN_URL}.`
         );
       }
       if (env.code === 'overage_cap_reached') {
