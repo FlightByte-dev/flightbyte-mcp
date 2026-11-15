@@ -7,7 +7,7 @@
   </a>
 </p>
 
-<h3 align="center">The FlightByte MCP server</h3>
+<h3 align="center">FlightByte MCP server</h3>
 
 <p align="center">
   Live flight status and flight webhooks as tools for your AI assistant.<br>
@@ -18,13 +18,14 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@flightbyte/mcp"><img src="https://img.shields.io/npm/v/@flightbyte/mcp?style=flat-square&color=EF6A1A&label=npm" alt="npm version"></a>
   <a href="https://mcp.flightbyte.dev/healthz"><img src="https://img.shields.io/website?url=https%3A%2F%2Fmcp.flightbyte.dev%2Fhealthz&style=flat-square&label=hosted&up_message=online&up_color=EF6A1A" alt="Hosted server status"></a>
+  <img src="https://img.shields.io/badge/Node-20%2B-121212?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node 20+">
   <img src="https://img.shields.io/badge/MCP-2025--11--25_%7C_2026--07--28-121212?style=flat-square" alt="MCP protocol versions">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-121212?style=flat-square" alt="MIT license"></a>
 </p>
 
 <p align="center">
   <a href="https://flightbyte.dev/docs/mcp"><b>Docs</b></a> ·
-  <a href="https://app.flightbyte.dev/signup"><b>Get a free key</b></a> ·
+  <a href="https://app.flightbyte.dev/signup?utm_source=npm&utm_medium=readme&utm_campaign=mcp-server"><b>Get a free key</b></a> ·
   <a href="https://flightbyte.dev/docs/reference"><b>API reference</b></a> ·
   <a href="https://t.me/flightbyte"><b>Support</b></a>
 </p>
@@ -41,7 +42,7 @@
 
 ## Quick start
 
-1. Get a free API key at [app.flightbyte.dev/signup](https://app.flightbyte.dev/signup).
+1. Get a free API key at [app.flightbyte.dev/signup](https://app.flightbyte.dev/signup?utm_source=npm&utm_medium=readme&utm_campaign=mcp-server).
 2. Connect the server. Use the hosted one, or run it locally:
 
    | | Address | Key |
