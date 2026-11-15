@@ -3,7 +3,7 @@
   "name": "dev.flightbyte/mcp",
   "title": "FlightByte",
   "description": "Live flight status, flight watches with signed webhooks, and FlightByte docs search.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "websiteUrl": "https://flightbyte.dev/docs/ai",
   "repository": {
     "url": "https://github.com/flightbyte-dev/flightbyte-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@flightbyte/mcp",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "runtimeHint": "npx",
       "transport": { "type": "stdio" },
       "environmentVariables": [

@@ -1,6 +1,6 @@
 {
   "name": "@flightbyte/mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for FlightByte, the flight status API with signed webhooks: look flights up, watch them with webhook subscriptions, and search the docs from any AI assistant.",
   "mcpName": "dev.flightbyte/mcp",
   "license": "MIT",
